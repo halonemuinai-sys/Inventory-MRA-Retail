@@ -1,0 +1,207 @@
+<!-- Head.html -->
+  <base target="_top">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'], serif: ['Georgia', 'serif'] },
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#4F46E5', 600: '#4338ca', 700: '#3730a3', 800: '#312e81' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS for GIS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8FAFC;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .nav-item.active {
+      background-color: #eff6ff;
+      color: #4338ca;
+      border-right: 3px solid #4338ca;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      color: #64748b;
+      border-right: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: #4338ca;
+      background-color: #f8fafc;
+    }
+
+    .loader {
+      border-top-color: #4338ca;
+      animation: spinner 1s linear infinite;
+    }
+
+    @keyframes spinner {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .config-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+
+    .tag-item {
+      background: #f1f5f9;
+      color: #334155;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+
+    .tag-item .close-btn {
+      cursor: pointer;
+      color: #94a3b8;
+    }
+
+    .tag-item .close-btn:hover {
+      color: #ef4444;
+    }
+
+    .type-btn.active {
+      background-color: #fff7ed;
+      color: #ea580c;
+      border-color: #ea580c;
+    }
+
+    .type-btn-office.active {
+      background-color: #eff6ff;
+      color: #4338ca;
+      border-color: #4338ca;
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 10mm;
+        /* Use a safe margin for printer unprintable areas */
+      }
+
+      body {
+        margin: 0;
+        background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body * {
+        visibility: hidden;
+      }
+
+      #bast-print-area,
+      #bast-print-area * {
+        visibility: visible;
+      }
+
+      #bast-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: white;
+        z-index: 9999;
+        display: block !important;
+        overflow: visible !important;
+      }
+
+      #bast-wrapper {
+        box-shadow: none !important;
+        max-width: none !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        background: white !important;
+        position: static !important;
+        overflow: visible !important;
+        border: none !important;
+      }
+
+      #bast-header-actions {
+        display: none !important;
+      }
+
+      #bast-paper {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        max-width: none !important;
+        padding: 0 !important;
+        /* Let @page margin handle outer spacing, or use internal padding safely */
+        border: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* Ensure clean typography for print */
+      #bast-paper h1,
+      #bast-paper h2,
+      #bast-paper h3,
+      #bast-paper p,
+      #bast-paper td {
+        color: #000 !important;
+        /* Force black text */
+      }
+
+      /* Hide background colors in grid if desired, or keep them for clarity. 
+         With print-color-adjust: exact, they will print. */
+
+      select {
+        appearance: none;
+        border: none;
+        background: transparent;
+        padding: 0;
+        font-weight: bold;
+        color: black;
+        /* Hide down arrow if any */
+      }
+
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>

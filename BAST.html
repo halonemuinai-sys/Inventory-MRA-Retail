@@ -1,0 +1,211 @@
+<!-- BAST OVERLAY -->
+<div id="bast-print-area"
+    class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden">
+    <!-- WRAPPER -->
+    <div class="flex flex-col w-full max-w-4xl h-[90vh] bg-white rounded-lg shadow-2xl overflow-hidden"
+        id="bast-wrapper">
+        <!-- HEADER ACTIONS -->
+        <div id="bast-header-actions" class="bg-slate-800 p-4 flex justify-between items-center text-white shrink-0">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-file-contract"></i>
+                <h2 class="font-bold text-sm">Pratinjau Dokumen BAST</h2>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.print()"
+                    class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded text-xs font-bold flex items-center gap-2 shadow-lg shadow-brand-500/20 transition-all">
+                    <i class="fa-solid fa-print"></i> Cetak Dokumen
+                </button>
+                <button onclick="document.getElementById('bast-print-area').classList.add('hidden')"
+                    class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-xmark"></i> Tutup
+                </button>
+            </div>
+        </div>
+
+        <!-- PRINTABLE PAPER (A4) -->
+        <div class="flex-1 overflow-y-auto bg-gray-200 p-8 flex justify-center">
+            <div id="bast-paper"
+                class="bg-white w-[210mm] min-h-[297mm] shadow-lg text-slate-900 relative flex flex-col">
+
+                <!-- DOCUMENT HEADER -->
+                <div class="px-12 pt-12 pb-6 border-b-2 border-slate-800">
+                    <div class="flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <h1 class="text-3xl font-extrabold tracking-tight text-slate-800 uppercase leading-none">
+                                Berita Acara</h1>
+                            <h2 class="text-lg font-semibold text-slate-500 uppercase tracking-widest mt-1">Serah Terima
+                                Aset</h2>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-lg text-brand-700 uppercase" id="bast-header-company">PT Nama
+                                Perusahaan</div>
+                            <div class="text-xs text-slate-500 uppercase tracking-wide font-semibold mt-1">IT Asset
+                                Management Dept.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENT BODY -->
+                <div class="px-12 py-8 flex-1 text-sm leading-relaxed text-slate-800">
+
+                    <p class="mb-8 text-slate-600">
+                        Pada hari ini, <span class="font-bold text-slate-900 border-b border-dashed border-slate-300"
+                            id="bast-date">...</span>, kami yang bertanda tangan di bawah ini menerangkan serah terima
+                        aset sebagai berikut:
+                    </p>
+
+                    <!-- PARTIES GRID -->
+                    <div class="grid grid-cols-2 gap-12 mb-10">
+                        <!-- PIHAK PERTAMA -->
+                        <div class="bg-slate-50 p-6 rounded-lg border border-slate-100 table-auto">
+                            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200">
+                                <span
+                                    class="bg-slate-200 text-slate-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                <h3 class="font-bold text-xs uppercase tracking-wider text-slate-700">Pihak Pertama
+                                    (Menyerahkan)</h3>
+                            </div>
+                            <table class="w-full text-xs">
+                                <tr>
+                                    <td class="py-1.5 w-20 text-slate-500 font-medium">Nama</td>
+                                    <td class="py-1.5 font-bold text-slate-800 flex items-center">
+                                        :
+                                        <select id="bast-admin-select" title="Admin BAST"
+                                            class="ml-1 font-bold bg-transparent outline-none cursor-pointer w-full hover:bg-white focus:bg-white rounded px-1 transition-colors">
+                                            <option value="">-- Pilih Admin --</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-500 font-medium">Departemen</td>
+                                    <td class="py-1.5 text-slate-800 flex items-center">
+                                        :
+                                        <select id="bast-dept-select" title="Departemen BAST"
+                                            class="ml-1 font-bold bg-transparent outline-none cursor-pointer w-full hover:bg-white focus:bg-white rounded px-1 transition-colors">
+                                            <option value="Information Technology" selected>Information Technology
+                                            </option>
+                                            <option value="GA Business Partner">GA Business Partner</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- PIHAK KEDUA -->
+                        <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
+                            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200">
+                                <span
+                                    class="bg-slate-200 text-slate-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                                <h3 class="font-bold text-xs uppercase tracking-wider text-slate-700">Pihak Kedua
+                                    (Menerima)</h3>
+                            </div>
+                            <table class="w-full text-xs">
+                                <tr>
+                                    <td class="py-1.5 w-20 text-slate-500 font-medium">Nama</td>
+                                    <td class="py-1.5 font-bold text-slate-800" id="bast-emp-name">: ...</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-500 font-medium">Jabatan</td>
+                                    <td class="py-1.5 text-slate-800" id="bast-emp-role">: ...</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1.5 text-slate-500 font-medium">Unit Bisnis</td>
+                                    <td class="py-1.5 text-slate-800" id="bast-emp-dept">: ...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <p class="mb-4 font-medium text-slate-700">Rincian aset yang diserahterimakan:</p>
+
+                    <!-- ASSET TABLE -->
+                    <table class="w-full border-collapse text-xs mb-8">
+                        <thead>
+                            <tr class="bg-slate-800 text-white">
+                                <th class="py-3 px-4 text-left font-bold uppercase w-1/3">Kategori</th>
+                                <th class="py-3 px-4 text-left font-bold uppercase">Spesifikasi Detail</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border border-slate-200 divide-y divide-slate-100">
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-slate-700 bg-slate-50 border-r border-slate-100">
+                                    Perangkat / Device</td>
+                                <td class="py-3 px-4 font-bold text-slate-900 text-sm" id="bast-asset-device">...</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-slate-700 bg-slate-50 border-r border-slate-100">
+                                    Serial Number (SN)</td>
+                                <td class="py-3 px-4 font-mono text-slate-600 tracking-wide" id="bast-asset-serial">...
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-slate-700 bg-slate-50 border-r border-slate-100">
+                                    Spesifikasi Teknis</td>
+                                <td class="py-3 px-4 text-slate-600" id="bast-asset-specs">...</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-slate-700 bg-slate-50 border-r border-slate-100">
+                                    Kelengkapan</td>
+                                <td class="py-3 px-4 text-slate-600">Unit Utama, Charger Adapter, Kabel Power, Tas
+                                    Laptop</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-slate-700 bg-slate-50 border-r border-slate-100">
+                                    Kondisi Fisik</td>
+                                <td class="py-3 px-4 text-slate-600">Baik / Normal / Layak Pakai</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- TERMS -->
+                    <div class="mb-12">
+                        <h4 class="font-bold text-xs uppercase text-slate-500 mb-3 border-b border-slate-200 pb-1">
+                            Syarat & Ketentuan Penggunaan (Terms of Use)</h4>
+                        <ul class="list-disc list-outside ml-4 space-y-1.5 text-[11px] text-slate-600 text-justify">
+                            <li>Pihak Kedua bertanggung jawab penuh atas keamanan fisik perangkat serta kerahasiaan data
+                                perusahaan yang tersimpan di dalamnya.</li>
+                            <li>Perangkat ini adalah milik perusahaan dan hanya digunakan untuk kepentingan pekerjaan
+                                (dilarang instalasi software ilegal/bajakan).</li>
+                            <li>Segala bentuk kerusakan atau kehilangan yang disebabkan oleh kelalaian (human error)
+                                akan menjadi tanggung jawab Pihak Kedua sesuai kebijakan perusahaan.</li>
+                            <li>Pihak Kedua wajib mengembalikan aset ini dalam kondisi baik apabila masa kerja berakhir
+                                atau jika diminta oleh perusahaan untuk maintenance/upgrade.</li>
+                        </ul>
+                    </div>
+
+                    <!-- SIGNATURES -->
+                    <div class="flex justify-between items-start mt-auto">
+                        <div class="text-center w-64">
+                            <p class="text-xs font-bold text-slate-400 mb-16 uppercase">Diserahkan Oleh,</p>
+                            <div class="border-t border-slate-800 pt-2 relative">
+                                <p class="text-xs text-slate-400 absolute -top-8 left-0 right-0 text-center">( Tanda
+                                    Tangan )</p>
+                                <p class="font-bold text-sm text-slate-800">IT Administrator</p>
+                            </div>
+                        </div>
+
+                        <div class="text-center w-64">
+                            <p class="text-xs font-bold text-slate-400 mb-16 uppercase">Diterima Oleh,</p>
+                            <div class="border-t border-slate-800 pt-2 relative">
+                                <p class="text-xs text-slate-400 absolute -top-8 left-0 right-0 text-center">( Tanda
+                                    Tangan )</p>
+                                <p class="font-bold text-sm text-slate-800" id="bast-sign-name">...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="bg-slate-50 border-t border-slate-100 px-12 py-4 text-center">
+                    <p class="text-[10px] text-slate-400 font-mono">Dokumen ini digenerate secara otomatis oleh sistem
+                        pada <span id="bast-footer-date"></span>.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Set footer date on render
+    document.getElementById('bast-footer-date').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+</script>

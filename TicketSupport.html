@@ -1,0 +1,97 @@
+<!-- TICKET SUPPORT VIEW -->
+<section id="ticket-support" class="page-section hidden">
+    <div class="flex flex-col lg:flex-row gap-6 items-start h-full">
+        <div
+            class="w-full lg:w-[400px] flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm p-6 ml-auto">
+            <h3 class="text-lg font-bold text-brand-700 mb-6">Buat Tiket Baru</h3>
+            <form class="space-y-4" onsubmit="handleTicketSubmit(event)">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Tanggal</label>
+                        <input type="date" id="ticket-date" title="Tanggal Tiket"
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Kategori</label>
+                        <select id="ticket-category" title="Kategori Tiket"
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600">
+                            <option value="" disabled selected>-- Pilih Kategori --</option>
+                            <option value="Hardware">Hardware (Kerusakan Fisik)</option>
+                            <option value="Software">Software / OS</option>
+                            <option value="Network">Jaringan / Internet</option>
+                            <option value="Maintenance">Maintenance Rutin</option>
+                            <option value="Request">Permintaan Aset Baru</option>
+                            <option value="Other">Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Pelapor</label>
+                    <select
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none text-slate-600 focus:border-brand-500"
+                        id="ticket-reporter" title="Pelapor" onchange="populateTicketAssets(this.value)">
+                        <option value="" disabled selected>-- Pilih Pelapor --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Aset Terkait <span
+                            class="text-slate-400 font-normal">(Opsional)</span></label>
+                    <select id="ticket-asset" title="Aset Terkait"
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none text-slate-600 focus:border-brand-500">
+                        <option value="" selected>-- Tidak Ada / Umum --</option>
+                    </select>
+                    <div class="text-[10px] text-slate-400 mt-1">Aset otomatis muncul jika sudah assign ke pelapor.
+                    </div>
+                </div>
+
+                <input type="text" id="ticket-subject" placeholder="Judul Masalah (Singkat)"
+                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500"
+                    required>
+
+                <textarea id="ticket-desc" placeholder="Deskripsi Detail..."
+                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none h-24 focus:border-brand-500"
+                    required></textarea>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Prioritas</label>
+                    <select id="ticket-priority" title="Prioritas"
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none text-slate-600 focus:border-brand-500">
+                        <option value="Low">Low (Tidak Mendesak)</option>
+                        <option value="Medium" selected>Medium (Standard)</option>
+                        <option value="High">High (Mendesak)</option>
+                        <option value="Critical">Critical (Sangat Kritis)</option>
+                    </select>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-lg shadow-md shadow-brand-600/20 transition-all mt-4 flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Tiket
+                </button>
+            </form>
+        </div>
+        <div class="flex-1 bg-white rounded-xl border border-slate-100 shadow-sm p-6 overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-700">Daftar Tiket <span id="ticket-list-count"
+                        class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-full ml-1 hidden">0</span></h3>
+                <div class="flex gap-2">
+                    <button onclick="loadTickets()" title="Refresh" class="text-slate-400 hover:text-brand-600 transition-colors"><i
+                            class="fa-solid fa-rotate"></i></button>
+                </div>
+            </div>
+
+            <div id="ticket-list-container" class="flex-1 overflow-y-auto pr-1 space-y-3">
+                <!-- Ticket Items injected here -->
+                <div class="text-center text-slate-400 py-10">
+                    <i class="fa-regular fa-folder-open text-3xl mb-2 opacity-30"></i>
+                    <p class="text-xs">Belum ada tiket.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="ticket-summary" class="page-section hidden">
+    <div class="p-10 text-center text-slate-400">Halaman Ringkasan Tiket (Segera Hadir)</div>
+</section>

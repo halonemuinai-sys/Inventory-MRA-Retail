@@ -1,0 +1,12 @@
+FIX SUMMARY:
+1. Updated GIS_Controller.gs to be CASE-INSENSITIVE and TRIMMED when matching locations.
+   - Example: "Plaza Indonesia" matches "plaza indonesia" or " Plaza Indonesia ".
+   - Checks 'location', 'Location', 'gisLocation'.
+   
+2. Restored missing code that caused "locations is not defined".
+
+3. Validated GIS_BusinessLogic.gs to ensuring Inventory items are counted correctly:
+   - Items source tagged as 'Inventory' will default to PC/Laptop validation if no specific category is found.
+   - New categories (Camera CCTV, Network Device) are mapped correctly.
+
+Please refresh the GIS Dashboard.

@@ -1,0 +1,55 @@
+<!-- RENTAL SPECIFICATION VIEW -->
+<section id="rental-spec" class="page-section hidden">
+    <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+        <div class="mb-6 flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">Detail Spesifikasi Sewa</h3>
+                <p class="text-sm text-slate-500">Daftar perangkat rental yang sedang aktif beserta spesisifikasinya</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="text" id="rental-spec-search" placeholder="Cari nama, tipe, serial..."
+                    class="bg-slate-50 border border-slate-200 rounded-lg text-sm px-4 py-2 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-shadow w-64"
+                    onkeyup="renderRentalSpecTable()">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-200">
+            <table class="min-w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50">
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Karyawan / Lokasi</th>
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Role / Dept</th>
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Unit Bisnis</th>
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Perangkat</th>
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Spesifikasi</th>
+                        <th class="p-3 text-xs font-bold text-slate-600 border-b border-slate-200">Vendor & Periode</th>
+                    </tr>
+                </thead>
+                <tbody id="rental-spec-table-body">
+                    <!-- JS Injected -->
+                </tbody>
+            </table>
+            <div id="rental-spec-empty" class="hidden p-8 text-center text-slate-400 text-sm">
+                Tidak ada data perangkat sewa yang cocok di unit bisnis ini.
+            </div>
+        </div>
+    </div>
+
+    <!-- RENTAL SPEC MODAL -->
+    <div id="rental-spec-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100">
+            <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Detail Perangkat Sewa</h3>
+                <button onclick="closeRentalSpecModal()" title="Tutup Modal" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="space-y-4" id="rental-spec-modal-content">
+                <!-- JS Injected content -->
+            </div>
+            
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeRentalSpecModal()" class="px-5 py-2.5 bg-brand-600 text-white font-bold text-sm rounded-lg shadow-md shadow-brand-600/20 hover:bg-brand-700 transition-colors w-full">Tutup Detail</button>
+            </div>
+        </div>
+    </div>
+</section>

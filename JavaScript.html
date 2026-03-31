@@ -1,0 +1,1836 @@
+<script>
+    // --- MOCK API (CONDITIONAL) ---
+    if (typeof google === 'undefined') {
+        window.google = {
+            script: {
+                run: {
+                    withSuccessHandler: function (callback) {
+                        return {
+                            apiGetInventory: () => setTimeout(() => callback([
+                                { id: '1', brand: 'Dell', model: 'XPS 13', serial: 'DL-12345', type: 'Sewa', rentalCost: 1500000, rentalEnd: '2025-05-20', status: 'Available', company: 'PT. Tech Corp', processor: 'Intel i7', ram: '16GB', storage: '512GB', os: 'Windows 11', office: '2019' },
+                                { id: '2', brand: 'Apple', model: 'MacBook Pro', serial: 'MB-99999', type: 'Beli', status: 'Assigned', assignedTo: 'John Doe', company: 'PT. Design Unit', processor: 'M2', ram: '16GB', storage: '512GB', os: 'macOS' },
+                                { id: '3', brand: 'Lenovo', model: 'ThinkPad T460', serial: 'LP04502', type: 'Sewa', rentalEnd: '2025-02-08', status: 'Available', company: 'PT. Tech Corp', processor: 'Intel Core i5', ram: '8GB', storage: '256GB', rentalCost: 389000 },
+                            ]), 500),
+                            apiGetEmployees: () => setTimeout(() => callback([
+                                { id: '101', name: 'John Doe', role: 'Designer', department: 'Creative', email: 'john@assetmgr.com', assignedAssetId: '2', company: 'PT. Design Unit', budget: 2000000 },
+                                { id: '102', name: 'Jane Smith', role: 'Sales', department: 'Sales', email: 'jane@assetmgr.com', company: 'PT. Tech Corp', budget: 0 },
+                            ]), 500),
+                            apiGetMasterData: () => setTimeout(() => callback([
+                                { category: 'Brand', value: 'Dell' }, { category: 'Brand', value: 'Apple' },
+                                { category: 'Company', value: 'PT. Tech Corp' }, { category: 'Department', value: 'IT' },
+                                { category: 'AdminSignatory', value: 'Budi Santoso' }
+                            ]), 500),
+                            apiGetConfig: () => setTimeout(() => callback([['RentalWarning', 30]]), 500),
+                            apiAddMasterData: () => setTimeout(() => callback({ success: true }), 500),
+                            apiDeleteMasterData: () => setTimeout(() => callback({ success: true }), 500),
+                            apiSaveConfig: () => setTimeout(() => callback({ success: true }), 500),
+                            apiRunCostAnalysis: () => setTimeout(() => callback({ 'PT. Tech Corp': [1500000, 389000] }), 500),
+                            apiAddInventory: () => setTimeout(() => callback({ success: true }), 500),
+                            apiUpdateInventory: (data) => setTimeout(() => { console.log("UPDATE", data); callback({ success: true }); }, 500),
+                            apiDeleteInventory: (id) => setTimeout(() => { console.log("DELETE", id); callback({ success: true }); }, 500),
+                            apiAddEmployee: (data) => setTimeout(() => callback({ success: true }), 500),
+                            apiUpdateEmployee: (data) => setTimeout(() => { console.log("UPDATE EMP", data); callback({ success: true }); }, 500),
+                            assignAssetToEmployee: () => setTimeout(() => callback({ success: true }), 500),
+                            getBASTData: () => setTimeout(() => callback({ employee: { name: 'John' }, asset: { brand: 'Dell' }, date: '2023-01-01' }), 500),
+                            apiLogin: (u, p) => setTimeout(() => {
+                                if (u === 'admin' && p === 'kmzway87aa') callback({ success: true, user: { name: 'Administrator', role: 'admin', username: 'admin' } });
+                                else callback({ success: false, message: 'Username salah' });
+                            }, 1000),
+                            apiGetUsers: () => setTimeout(() => callback([
+                                { id: 'u1', username: 'admin', name: 'Administrator', role: 'admin' },
+                                { id: 'u2', username: 'user1', name: 'User Satu', role: 'user' }
+                            ]), 500),
+                            apiAddUser: (d) => setTimeout(() => callback({ success: true }), 500),
+                            apiDeleteUser: (u) => setTimeout(() => callback({ success: true }), 500),
+                            apiGetAllData: (year) => setTimeout(() => callback({
+                                inventory: [
+                                    { id: '1', brand: 'Dell', model: 'XPS 13', serial: 'DL-12345', type: 'Sewa', rentalCost: 1500000, rentalEnd: '2025-05-20', status: 'Available', company: 'PT. Tech Corp', processor: 'Intel i7', ram: '16GB', storage: '512GB', os: 'Windows 11', office: '2019' },
+                                    { id: '2', brand: 'Apple', model: 'MacBook Pro', serial: 'MB-99999', type: 'Beli', status: 'Assigned', assignedTo: 'John Doe', company: 'PT. Design Unit', processor: 'M2', ram: '16GB', storage: '512GB', os: 'macOS' }
+                                ],
+                                employees: [
+                                    { id: '101', name: 'John Doe', role: 'Designer', department: 'Creative', email: 'john@assetmgr.com', assignedAssetId: '2', company: 'PT. Design Unit', budget: 2000000 }
+                                ],
+                                masterData: [
+                                    { category: 'Brand', value: 'Dell' }, { category: 'Brand', value: 'Apple' },
+                                    { category: 'Company', value: 'PT. Tech Corp' }
+                                ],
+                                config: [['RentalWarning', 30]],
+                                users: [{ id: 'u1', username: 'admin', name: 'Administrator', role: 'admin' }],
+                                costAnalysis: { 'PT. Tech Corp': [1500000, 389000] },
+                                gisLocations: [{ name: "Bvlgari Plaza Ind", brand: "Bvlgari" }]
+                            }), 1000)
+                        };
+                    }
+                }
+            }
+        };
+    }
+
+    /* ... */
+
+    let inventoryData = [], otherDeviceData = [], employeeData = [], masterData = [], configData = [], costAnalysisData = {}, gisLocations = [];
+    let activeCompany = 'Global';
+    let selectedGlobalYear = new Date().getFullYear();
+    let chartInstanceCombined = null;
+    let currentUser = null;
+
+    // Auto-login check
+    window.onload = function () {
+        checkAuth();
+    };
+
+    function checkAuth() {
+        const storedUser = localStorage.getItem('app_user');
+        if (storedUser) {
+            try {
+                currentUser = JSON.parse(storedUser);
+                // Update UI immediately
+                document.getElementById('login-container').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                updateSidebarUser();
+                refreshData();
+            } catch (e) {
+                console.error("Auth Error", e);
+                localStorage.removeItem('app_user');
+            }
+        }
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        const u = document.getElementById('login-username').value;
+        const p = document.getElementById('login-password').value;
+        const btn = document.getElementById('btn-login');
+        const err = document.getElementById('login-error');
+
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...';
+        btn.disabled = true;
+        err.classList.add('hidden');
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                currentUser = res.user;
+                localStorage.setItem('app_user', JSON.stringify(currentUser));
+
+                document.getElementById('login-container').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+
+                updateSidebarUser();
+                refreshData();
+            } else {
+                err.innerText = res.message;
+                err.classList.remove('hidden');
+                btn.innerHTML = '<span>Masuk Sistem</span><i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform text-xs"></i>';
+                btn.disabled = false;
+            }
+        }).apiLogin(u, p);
+    }
+
+    function handleLogout() {
+        if (confirm("Keluar dari aplikasi?")) {
+            localStorage.removeItem('app_user');
+            currentUser = null;
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-container').classList.remove('hidden');
+            // Reset Login Form
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            const btn = document.getElementById('btn-login');
+            btn.innerHTML = '<span>Masuk Sistem</span><i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform text-xs"></i>';
+            btn.disabled = false;
+        }
+    }
+
+    function updateSidebarUser() {
+        if (!currentUser) return;
+        document.getElementById('sidebar-user-name').innerText = currentUser.name;
+        document.getElementById('sidebar-user-role').innerText = currentUser.role.toUpperCase();
+        document.getElementById('sidebar-user-initial').innerText = currentUser.name.charAt(0).toUpperCase();
+    }
+
+    function refreshData() {
+        showLoading(true);
+        google.script.run.withSuccessHandler(data => {
+            // Destructure data
+            masterData = data.masterData;
+            window.usersData = data.users;
+            inventoryData = data.inventory;
+            otherDeviceData = data.otherDevices || [];
+            employeeData = data.employees;
+            configData = data.config;
+            costAnalysisData = data.costAnalysis;
+            gisLocations = data.gisLocations || [];
+            if (typeof initGISLogic === 'function') initGISLogic(gisLocations);
+
+            // Render UI
+            renderConfiguration();
+            populateMasterDropdowns();
+            populateTicketReporters(); // In TicketJS or logic
+            loadConfigValues();
+            populateYearDropdown('dash-year-select');
+            populateYearDropdown('cost-year-select');
+            populateYearDropdown('rental-year');
+            populateCompanySelector();
+
+            renderRentalReport();
+
+            // Initialize Ticket List & Badge
+            if (typeof loadTickets === 'function') loadTickets();
+
+            updateDashboard();
+            // renderCombinedChart(); // This function is not present in the original code, removing to avoid error
+            // renderAssetHistory('all', 'asset-history-list'); // This function is not present in the original code, removing to avoid error
+            renderInventoryTable();
+            renderOtherDeviceTable();
+            renderEmployeeTable();
+            renderCostTable();
+            renderBudgetTable();
+            if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();
+
+            showLoading(false);
+        }).apiGetAllData(selectedGlobalYear);
+    }
+
+    function renderBudgetTable() {
+        const tbody = document.getElementById('budget-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany);
+
+        let totalBudget = 0;
+        let totalUsed = 0;
+
+        filteredEmps.forEach(emp => {
+            const asset = emp.assignedAssetId ? inventoryData.find(i => i.id == emp.assignedAssetId) : null;
+            const currentCost = asset && asset.type === 'Sewa' ? (parseInt(asset.rentalCost) || 0) : 0;
+            const budget = parseInt(emp.budget) || 0;
+
+            totalBudget += budget;
+            totalUsed += currentCost;
+
+            const remaining = budget - currentCost;
+            let remainingClass = remaining < 0 ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold';
+            if (budget === 0) remainingClass = 'text-slate-400'; // No budget set
+
+            let statusBadge = '<span class="text-xs text-slate-400 font-bold">N/A</span>';
+            let barColor = 'bg-slate-200';
+            let percent = 0;
+
+            if (budget > 0) {
+                percent = Math.min((currentCost / budget) * 100, 100);
+                if (currentCost > budget) {
+                    statusBadge = '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold">Over</span>';
+                    barColor = 'bg-red-500';
+                } else {
+                    statusBadge = '<span class="bg-green-100 text-green-600 px-2 py-1 rounded text-xs font-bold">Safe</span>';
+                    barColor = 'bg-green-500';
+                }
+            } else if (currentCost > 0) {
+                statusBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">Unset</span>';
+                barColor = 'bg-yellow-500';
+                percent = 100;
+            }
+
+            const budgetFormatted = budget > 0 ? budget.toLocaleString('id-ID') : '';
+            const remainingFormatted = budget > 0 ? (remaining < 0 ? '- ' : '') + 'Rp ' + Math.abs(remaining).toLocaleString('id-ID') : '-';
+
+            const row = `<tr class="hover:bg-slate-50 border-b border-slate-50"><td class="px-6 py-4"><div class="font-bold text-sm text-slate-800">${emp.name}</div><div class="text-xs text-slate-500">${emp.role}</div></td><td class="px-6 py-4"><div class="text-xs text-slate-700">${asset ? asset.brand + ' ' + asset.model : '-'}</div></td><td class="px-6 py-4 text-right text-xs font-mono">${currentCost > 0 ? 'Rp ' + currentCost.toLocaleString('id-ID') : '-'}</td><td class="px-6 py-4 text-right"><input type="text" value="${budgetFormatted}" class="w-28 p-1 text-right text-xs border border-slate-300 rounded focus:border-brand-500 outline-none" onkeyup="formatCurrency(this)" onchange="updateEmployeeBudget('${emp.id}', this.value)" placeholder="Set Budget"></td><td class="px-6 py-4 text-right text-xs font-mono ${remainingClass}">${remainingFormatted}</td><td class="px-6 py-4"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="${barColor} h-full" style="width: ${percent}%"></div></div>${statusBadge}</div></td><td class="px-6 py-4 text-right"><button class="text-slate-400 hover:text-brand-600" onclick="editEmployee('${emp.id}')"><i class="fa-solid fa-pen-to-square"></i></button></td></tr>`;
+            tbody.innerHTML += row;
+        });
+
+        // Update Summary Cards
+        document.getElementById('budget-total-limit').innerText = 'Rp ' + totalBudget.toLocaleString('id-ID');
+        document.getElementById('budget-total-used').innerText = 'Rp ' + totalUsed.toLocaleString('id-ID');
+        const totalRemaining = totalBudget - totalUsed;
+        const totalRemainingEl = document.getElementById('budget-total-remaining');
+        totalRemainingEl.innerText = (totalRemaining < 0 ? '- ' : '') + 'Rp ' + Math.abs(totalRemaining).toLocaleString('id-ID');
+        totalRemainingEl.className = totalRemaining < 0 ? 'text-xl font-bold text-red-600' : 'text-xl font-bold text-emerald-700';
+    }
+    function updateEmployeeBudget(empId, value) {
+        const emp = employeeData.find(e => e.id == empId);
+        if (!emp) return;
+
+        // Remove dots for parsing
+        const cleanValue = value ? parseInt(value.replace(/\./g, '')) : 0;
+
+        emp.budget = cleanValue;
+        const dataToUpdate = { id: empId, budget: cleanValue };
+
+        google.script.run.withSuccessHandler((res) => {
+            if (res.success) {
+                renderBudgetTable();
+            } else {
+                alert("Gagal menyimpan budget.");
+            }
+        }).apiUpdateEmployee(dataToUpdate);
+    }
+
+    function exportBudgetReport() {
+        const rows = [['Nama Karyawan', 'Role', 'Departemen', 'Aset', 'Serial Number', 'Biaya Sewa', 'Budget Limit', 'Sisa Budget', 'Status']];
+        const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany);
+
+        filteredEmps.forEach(emp => {
+            const asset = emp.assignedAssetId ? inventoryData.find(i => i.id == emp.assignedAssetId) : null;
+            const currentCost = asset && asset.type === 'Sewa' ? (parseInt(asset.rentalCost) || 0) : 0;
+            const budget = parseInt(emp.budget) || 0;
+            const remaining = budget - currentCost;
+
+            let status = 'N/A';
+            if (budget > 0) {
+                status = currentCost > budget ? 'Over Budget' : 'Safe';
+            } else if (currentCost > 0) {
+                status = 'No Budget Set';
+            }
+
+            rows.push([
+                `"${emp.name}"`,
+                `"${emp.role}"`,
+                `"${emp.department}"`,
+                `"${asset ? asset.brand + ' ' + asset.model : '-'}"`,
+                `"${asset ? asset.serial : '-'}"`,
+                currentCost,
+                budget,
+                remaining,
+                status
+            ]);
+        });
+
+        let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Budget_Report_${activeCompany}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    function populateYearDropdown(elementId) {
+        const sel = document.getElementById(elementId);
+        if (!sel) return;
+        sel.innerHTML = '';
+        const current = new Date().getFullYear();
+        for (let y = current - 2; y <= current + 3; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.text = y;
+            if (y === selectedGlobalYear) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+    function changeGlobalYear(year) { selectedGlobalYear = parseInt(year); const d1 = document.getElementById('dash-year-select'); const d2 = document.getElementById('cost-year-select'); if (d1) d1.value = selectedGlobalYear; if (d2) d2.value = selectedGlobalYear; showLoading(true); google.script.run.withSuccessHandler(costs => { costAnalysisData = costs; updateDashboard(); renderCostTable(); showLoading(false); }).apiRunCostAnalysis(selectedGlobalYear); }
+    function changeCostYear(year) { changeGlobalYear(year); }
+    function handleCompanySwitch(val) {
+        activeCompany = val;
+        const label = activeCompany === 'Global' ? '(Global)' : `(${activeCompany})`;
+        const elSubtitle = document.getElementById('company-subtitle'); if (elSubtitle) elSubtitle.innerText = activeCompany === 'Global' ? 'All Business Units' : activeCompany;
+        const elDash = document.getElementById('dash-comp-label'); if (elDash) elDash.innerText = label;
+        const elCost = document.getElementById('cost-comp-label'); if (elCost) elCost.innerText = label;
+        const elEmp = document.getElementById('emp-list-label'); if (elEmp) elEmp.innerText = label;
+
+        updateDashboard();
+        renderInventoryTable();
+        renderEmployeeTable();
+        renderCostTable();
+        renderBudgetTable();
+        renderRentalReport(); // Update Rental Report
+        if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();
+        populateCompanySelector();
+    }
+    function updateDashboard() {
+        const inv = inventoryData.filter(i => activeCompany === 'Global' || i.company === activeCompany);
+        // emps is defined but was unused in previous snippet, we need it now for lookup
+        const emps = employeeData;
+
+        const totalSewa = inv.filter(i => i.type === 'Sewa').length;
+        const totalKantor = inv.filter(i => i.type !== 'Sewa').length;
+
+        document.getElementById('dash-total-sewa').innerText = totalSewa;
+        document.getElementById('dash-total-kantor').innerText = totalKantor;
+        document.getElementById('dash-available').innerText = inv.filter(i => i.status === 'Available').length;
+        document.getElementById('dash-tickets').innerText = "0";
+
+        // Calculate YTD Cost from costAnalysisData (match with cost analysis page)
+        let totalVal = 0;
+        Object.keys(costAnalysisData).forEach(comp => {
+            if (activeCompany === 'Global' || comp === activeCompany) {
+                totalVal += costAnalysisData[comp].reduce((a, b) => a + b, 0);
+            }
+        });
+        document.getElementById('dash-cost').innerText = "Rp " + totalVal.toLocaleString('id-ID');
+
+        const warningList = document.getElementById('rental-warning-list');
+        const warningContainer = document.getElementById('dashboard-rental-container');
+        warningList.innerHTML = '';
+
+        const today = new Date();
+        let hasWarning = false;
+        let warningCount = 0;
+        let warningItems = [];
+
+        // Count and collect warnings
+        inv.forEach(item => {
+            if (item.type === 'Sewa' && item.rentalEnd && item.status !== 'Return to Vendor') {
+                const endDate = new Date(item.rentalEnd);
+                const diffTime = endDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 30) {
+                    hasWarning = true;
+                    warningCount++;
+
+                    // Find Employee details
+                    const emp = employeeData.find(e => e.assignedAssetId == item.id);
+                    const empName = emp ? emp.name : (item.assignedTo || 'Unassigned');
+                    const empBudget = emp ? (parseInt(emp.budget) || 0) : 0;
+                    const budgetFormatted = empBudget > 0 ? 'Rp ' + empBudget.toLocaleString('id-ID') : 'Rp 0';
+
+                    warningItems.push({ item, diffDays, empName, budgetFormatted });
+                }
+            }
+        });
+
+        // Update Sidebar Badge
+        const badge = document.getElementById('sidebar-warning-badge');
+        if (badge) {
+            if (warningCount > 0) {
+                badge.innerText = warningCount;
+                badge.classList.remove('hidden');
+                // Pulse animation for better visibility
+                badge.classList.add('animate-pulse');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('animate-pulse');
+            }
+        }
+
+        if (hasWarning) {
+            warningContainer.classList.remove('hidden');
+
+            // Advanced Header inside the list container (or before items)
+            // But warningList is a flex container for items. Let's make sure we handle layout.
+            // Actually, warningList is likely a flex-row.
+            // We can put a header above it? No, warningContainer usually has the header.
+            // Let's check Dashboard.html structure first.
+            // Assuming warningList is the container for CARDS only.
+
+            warningList.innerHTML = '';
+            // Sort by days remaining (urgent first)
+            warningItems.sort((a, b) => a.diffDays - b.diffDays).forEach(data => {
+                const { item, diffDays, empName, budgetFormatted } = data;
+                // Color coding based on urgency
+                const urgencyColor = diffDays <= 7 ? 'red' : (diffDays <= 14 ? 'orange' : 'yellow');
+                const urgencyBg = diffDays <= 7 ? 'bg-red-50' : (diffDays <= 14 ? 'bg-orange-50' : 'bg-yellow-50');
+                const urgencyBorder = diffDays <= 7 ? 'border-red-500' : (diffDays <= 14 ? 'border-orange-500' : 'border-yellow-500');
+                const urgencyText = diffDays <= 7 ? 'text-red-700' : (diffDays <= 14 ? 'text-orange-700' : 'text-yellow-700');
+
+                warningList.innerHTML += `
+                        <div class="min-w-[280px] bg-white border border-slate-100 border-l-4 ${urgencyBorder} rounded-xl p-4 shadow-sm relative flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="showSection('inventory'); editInventoryItem('${item.id}');">
+                             <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm truncate max-w-[150px] group-hover:text-brand-600" title="${item.brand} ${item.model}">${item.brand} ${item.model} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1 opacity-0 group-hover:opacity-100"></i></h4>
+                                    <div class="text-[10px] text-slate-500 font-mono">${item.serial}</div>
+                                </div>
+                                <span class="${urgencyBg} ${urgencyText} text-[10px] font-bold px-2 py-1 rounded-full border border-slate-100 whitespace-nowrap">${diffDays} Hari Lagi</span>
+                             </div>
+                             
+                             <div class="mt-3 pt-3 border-t border-slate-50 space-y-1">
+                                <div class="flex items-center gap-2">
+                                     <div class="w-5 flex justify-center"><i class="fa-regular fa-user text-slate-400 text-xs"></i></div>
+                                     <span class="text-xs font-semibold text-slate-700 truncate">${empName}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                     <div class="w-5 flex justify-center"><i class="fa-solid fa-coins text-slate-400 text-xs"></i></div>
+                                     <span class="text-xs text-slate-600">Budget: <span class="font-mono font-medium text-slate-700">${budgetFormatted}</span></span>
+                                </div>
+                             </div>
+                        </div>`;
+            });
+
+            // Update the main header text if possible
+            const warningTitle = document.getElementById('dashboard-warning-title');
+            if (warningTitle) warningTitle.innerHTML = `<i class="fa-regular fa-bell text-white"></i> Notifikasi Sewa <span class="bg-white text-orange-600 text-[10px] px-2 py-0.5 rounded-full ml-2">${warningCount}</span>`;
+
+        } else {
+            warningContainer.classList.add('hidden');
+        }
+
+        renderCombinedChart(inv);
+
+        const actList = document.getElementById('dash-activities');
+        actList.innerHTML = '';
+        inv.slice(-3).reverse().forEach(item => {
+            actList.innerHTML += `<div class="flex gap-4 items-start pb-4 border-b border-slate-50 last:border-0 last:pb-0"><div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">NEW</div><div><h4 class="text-sm font-bold text-slate-800">Aset Baru</h4><p class="text-xs text-slate-500 mt-0.5">Menambahkan ${item.brand} ${item.model} (${item.serial}).</p></div></div>`;
+        });
+
+        const costList = document.getElementById('dash-cost-list');
+        costList.innerHTML = '';
+        const companyCosts = {};
+        const companyUnits = {}; // Track unit counts
+        let maxCost = 0;
+
+        Object.keys(costAnalysisData).forEach(comp => {
+            if (activeCompany !== 'Global' && comp !== activeCompany) return;
+            const total = costAnalysisData[comp].reduce((a, b) => a + b, 0);
+            if (total > 0) {
+                companyCosts[comp] = total;
+                if (total > maxCost) maxCost = total;
+            }
+        });
+
+        // Count units for each company with cost
+        inventoryData.forEach(item => {
+            if (item.type === 'Sewa' && (activeCompany === 'Global' || item.company === activeCompany)) {
+                if (!companyUnits[item.company]) companyUnits[item.company] = 0;
+                companyUnits[item.company]++;
+            }
+        });
+
+        Object.keys(companyCosts).sort((a, b) => companyCosts[b] - companyCosts[a]).slice(0, 5).forEach(comp => {
+            const cost = companyCosts[comp];
+            const units = companyUnits[comp] || 0;
+            const percent = (cost / maxCost) * 100;
+            costList.innerHTML += `<div><div class="flex justify-between text-xs font-bold text-slate-700 mb-1"><span>${comp} <span class="text-slate-400 font-normal ml-1">(${units} Unit)</span></span><span>Rp ${cost.toLocaleString('id-ID')}</span></div><div class="w-full bg-slate-100 rounded-full h-1.5"><div class="bg-brand-500 h-1.5 rounded-full" style="width: ${percent}%"></div></div></div>`;
+        });
+        if (Object.keys(companyCosts).length === 0) costList.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Belum ada data biaya tahun ini.</div>';
+    }
+    function renderCombinedChart(filteredInv) { const ctx = document.getElementById('chart-combined').getContext('2d'); if (chartInstanceCombined) chartInstanceCombined.destroy(); const monthlyCosts = new Array(12).fill(0); Object.keys(costAnalysisData).forEach(comp => { if (activeCompany === 'Global' || comp === activeCompany) { costAnalysisData[comp].forEach((val, idx) => { monthlyCosts[idx] += val; }); } }); const monthlyQty = new Array(12).fill(0); const year = selectedGlobalYear; for (let m = 0; m < 12; m++) { const monthStart = new Date(year, m, 1); const monthEnd = new Date(year, m + 1, 0); let count = 0; filteredInv.forEach(item => { if (item.type === 'Sewa') { const start = item.rentalStart ? new Date(item.rentalStart) : null; const end = item.rentalEnd ? new Date(item.rentalEnd) : null; if (start && end) { if (start <= monthEnd && end >= monthStart) { count++; } } } }); monthlyQty[m] = count; } chartInstanceCombined = new Chart(ctx, { type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'], datasets: [{ label: 'Total Biaya (Rp)', data: monthlyCosts, backgroundColor: '#60a5fa', borderRadius: 6, order: 2, yAxisID: 'y' }, { type: 'line', label: 'Jumlah Aset Sewa', data: monthlyQty, borderColor: '#f97316', backgroundColor: 'white', pointBorderColor: '#f97316', pointBackgroundColor: 'white', pointBorderWidth: 2, pointRadius: 4, borderWidth: 2, tension: 0.4, order: 1, yAxisID: 'y1' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, scales: { y: { type: 'linear', display: true, position: 'left', beginAtZero: true, grid: { borderDash: [2, 4], color: '#e2e8f0' }, ticks: { callback: function (value) { if (value >= 1000000) return (value / 1000000) + 'Jt'; if (value >= 1000) return (value / 1000) + 'k'; return value; }, font: { size: 10 } } }, y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1, font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } }, tooltip: { callbacks: { label: function (context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.dataset.yAxisID === 'y') { label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.raw); } else { label += context.raw + ' Unit'; } return label; } } } } } }); }
+    function generateBAST_fromData(empData, assetId) { const asset = inventoryData.find(i => i.id == assetId); if (!asset) return; document.getElementById('bast-date').innerText = new Date().toLocaleDateString('id-ID'); document.getElementById('bast-emp-name').innerText = `: ${empData.name}`; document.getElementById('bast-emp-role').innerText = `: ${empData.role}`; document.getElementById('bast-emp-dept').innerText = `: ${empData.company} / ${empData.department}`; document.getElementById('bast-sign-name').innerText = empData.name; document.getElementById('bast-header-company').innerText = empData.company; document.getElementById('bast-asset-device').innerText = `${asset.brand} ${asset.model}`; document.getElementById('bast-asset-serial').innerText = asset.serial; const specs = [asset.processor, asset.ram, asset.storage].filter(Boolean).join(', '); document.getElementById('bast-asset-specs').innerText = specs || '-'; populateBASTAdminDropdown(); document.getElementById('bast-print-area').classList.remove('hidden'); }
+    function populateBASTAdminDropdown() { const sel = document.getElementById('bast-admin-select'); sel.innerHTML = '<option value="">-- Pilih Admin --</option>'; masterData.filter(m => m.category === 'AdminSignatory').forEach(m => { sel.innerHTML += `<option value="${m.value}">${m.value}</option>`; }); }
+    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company');[invFormSel, empFormSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Unit Bisnis --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
+    function populateMasterDropdowns() {
+        const fill = (id, cat, invKey) => {
+            const el = document.getElementById(id);
+            if (el) {
+                const label = el.options[0].text;
+                el.innerHTML = `<option value="" disabled selected>${label}</option>`;
+
+                // Get values from Master Data
+                let values = masterData.filter(m => m.category === cat).map(m => m.value);
+
+                // If inventory key provided, also add unique values from existing inventory
+                if (invKey && inventoryData) {
+                    const invValues = inventoryData.map(i => i[invKey]).filter(v => v !== undefined && v !== null && v !== '');
+                    values = [...values, ...invValues];
+                }
+
+                // Deduplicate and sort
+                const uniqueValues = [...new Set(values)].sort();
+
+                uniqueValues.forEach(val => {
+                    el.innerHTML += `<option value="${val}">${val}</option>`;
+                });
+            }
+        };
+
+        fill('form-brand', 'Brand', 'brand');
+
+
+        fill('form-processor', 'Processor', 'processor');
+        fill('form-ram', 'RAM', 'ram');
+        fill('form-storage', 'Storage', 'storage');
+        fill('form-os', 'OS', 'os');
+        fill('form-office', 'Office', 'office');
+        fill('form-dept', 'Department');
+
+        // Location logic moved to GIS_JS.html
+        if (typeof populateLocationDropdown === 'function') populateLocationDropdown();
+    }
+    // Ticket logic moved to TicketJS.html
+    function populateTicketReporters() { const sel = document.getElementById('ticket-reporter'); if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Pelapor --</option>'; employeeData.forEach(e => { sel.innerHTML += `<option value="${e.id}">${e.name} (${e.department})</option>`; }); } }
+    function renderInventoryTable() {
+        const search = document.getElementById('inv-search').value.toLowerCase(); const filterType = document.getElementById('filter-type').value; const filterStatus = document.getElementById('filter-status').value; const tbody = document.getElementById('inventory-table-body'); tbody.innerHTML = ''; const filtered = inventoryData.filter(item => { const matchCompany = activeCompany === 'Global' || item.company === activeCompany; const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search)); const matchesType = filterType === '' || item.type === filterType; const matchesStatus = filterStatus === '' || item.status === filterStatus; return matchCompany && matchesSearch && matchesType && matchesStatus; }); if (filtered.length === 0) document.getElementById('inv-empty-msg').classList.remove('hidden'); else document.getElementById('inv-empty-msg').classList.add('hidden'); filtered.forEach(item => {
+            const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
+            const specsLine2 = `OS: ${item.os || '-'}`;
+            const specsLine3 = `Office: ${item.office || '-'}`;
+            let statusBadge = item.status === 'Available' ? `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200 flex items-center w-fit gap-1"><i class="fa-solid fa-check"></i> Tersedia</span>` : (item.status === 'Assigned' ? `<span class="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold border border-blue-200 flex items-center w-fit gap-1"><i class="fa-solid fa-user"></i> Digunakan</span>` : `<span class="px-3 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200 flex items-center w-fit gap-1"><i class="fa-solid fa-triangle-exclamation"></i> Rusak</span>`);
+
+            let tenantInfo = '';
+            // Location & Store Brand Information
+            const locInfo = item.location ? `<div class="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-1"><i class="fa-solid fa-map-location-dot text-slate-400"></i> ${item.location}</div>` : '';
+            // Store Brand Removed
+
+            if (item.type === 'Sewa') {
+                const endDate = item.rentalEnd ? new Date(item.rentalEnd).toLocaleDateString('id-ID') : '-';
+                const vendorInfo = item.vendor ? `<div class="text-[10px] text-indigo-600 font-bold mt-1 bg-indigo-50 px-1 rounded w-fit">${item.vendor}</div>` : '';
+                tenantInfo = `<div class="flex flex-col"><span class="text-[11px] font-bold text-orange-500 flex items-center gap-1"><i class="fa-regular fa-clock"></i> Sewa</span><span class="text-[10px] text-slate-400">End: ${endDate}</span>${vendorInfo}${locInfo}</div>`;
+            } else {
+                tenantInfo = `<span class="text-[11px] font-bold text-slate-400 flex items-center gap-1"><i class="fa-solid fa-building"></i> Kantor</span>${locInfo}`;
+            }
+
+            if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
+
+            const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`; tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+        });
+    }
+
+    // --- OTHER DEVICE FUNCTIONS ---
+    function renderOtherDeviceTable() {
+        const search = document.getElementById('other-device-search').value.toLowerCase();
+        const tbody = document.getElementById('other-device-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const filtered = otherDeviceData.filter(item => {
+            const matchCompany = activeCompany === 'Global' || item.company === activeCompany;
+            const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search)) || (item.category && item.category.toLowerCase().includes(search));
+            return matchCompany && matchesSearch;
+        });
+
+        if (filtered.length === 0) document.getElementById('other-device-empty-msg').classList.remove('hidden');
+        else document.getElementById('other-device-empty-msg').classList.add('hidden');
+
+        filtered.forEach(item => {
+            const location = item.location || '-';
+            const actions = `
+                <div class="flex items-center justify-end gap-2">
+                    <button onclick="editOtherDeviceItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button>
+                    <button onclick="deleteOtherDeviceItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                </div>`;
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-800 text-sm">${item.brand} ${item.model}</div>
+                        <div class="text-[11px] text-slate-500 font-mono">${item.serial}</div>
+                    </td>
+                     <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">${item.category}</span>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-600">${location}</td>
+                    <td class="px-6 py-4 text-right">${actions}</td>
+                </tr>`;
+        });
+    }
+
+    function deleteOtherDeviceItem(id) {
+        if (!confirm("Hapus device ini?")) return;
+        showLoading(true);
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                refreshData();
+            } else {
+                alert("Error: " + res.message);
+                showLoading(false);
+            }
+        }).apiDeleteOtherDevice(id);
+    }
+
+    function handleOtherDeviceSubmit(e) {
+        e.preventDefault();
+        showLoading(true);
+        const formData = new FormData(document.getElementById('other-device-form'));
+        const data = Object.fromEntries(formData.entries());
+
+        const successHandler = (res) => {
+            if (res.success) {
+                resetOtherDeviceForm();
+                refreshData();
+                showLoading(false);
+                // Don't hide section, just refresh
+            } else {
+                alert("Error: " + res.message);
+                showLoading(false);
+            }
+        };
+
+        if (data.id) google.script.run.withSuccessHandler(successHandler).apiUpdateOtherDevice(data);
+        else {
+            if (!data.id) delete data.id;
+            google.script.run.withSuccessHandler(successHandler).apiAddOtherDevice(data);
+        }
+    }
+
+    function editOtherDeviceItem(id) {
+        const item = otherDeviceData.find(i => i.id === id);
+        if (!item) return;
+
+        document.getElementById('other-device-id').value = item.id;
+        document.getElementById('form-other-company').value = item.company || '';
+        document.getElementById('form-other-category').value = item.category || '';
+        document.querySelector('input[name="brand"]').value = item.brand || '';
+        document.querySelector('input[name="model"]').value = item.model || '';
+        document.querySelector('input[name="serial"]').value = item.serial || '';
+        document.getElementById('form-other-date').value = item.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : '';
+        document.getElementById('form-other-price').value = item.purchasePrice ? parseInt(item.purchasePrice).toLocaleString('id-ID') : '';
+        document.getElementById('form-other-location').value = item.location || '';
+    }
+
+    function resetOtherDeviceForm() {
+        document.getElementById('other-device-form').reset();
+        document.getElementById('other-device-id').value = '';
+        // Defaults
+        document.getElementById('form-other-company').value = activeCompany !== 'Global' ? activeCompany : '';
+    }
+
+    function renderEmployeeTable() { const fullBody = document.getElementById('employee-table-body'); fullBody.innerHTML = ''; const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany); filteredEmps.forEach(emp => { fullBody.innerHTML += `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-sm font-medium text-slate-700">${emp.name}</td><td class="p-3 text-xs text-slate-500">${emp.company}</td><td class="p-3 text-xs text-slate-500">${emp.role}</td><td class="p-3 font-mono text-xs text-slate-600">${emp.assignedAssetId || '-'}</td><td class="p-3 text-right">${emp.assignedAssetId ? `<button onclick="generateBAST('${emp.id}')" class="text-brand-600 text-xs hover:underline">BAST</button>` : `<button onclick="openAssignModal('${emp.id}')" class="text-slate-400 text-xs hover:text-brand-600">Assign</button>`}</td></tr>`; }); }
+    function renderCostTable() { const data = costAnalysisData; const tbody = document.getElementById('cost-table-body'); tbody.innerHTML = ''; Object.keys(data).forEach(comp => { if (activeCompany !== 'Global' && comp !== activeCompany) return; const vals = data[comp]; const total = vals.reduce((a, b) => a + b, 0); const cells = vals.map(v => `<td class="p-2 border border-slate-100 text-xs text-right text-slate-600">${v > 0 ? (v / 1000).toLocaleString() + 'k' : '-'}</td>`).join(''); tbody.innerHTML += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-brand-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${(total / 1000).toLocaleString()}k</td></tr>`; }); }
+    function setAssetType(type) { document.getElementById('form-type-input').value = type; if (type === 'Beli') { document.getElementById('btn-type-beli').className = 'type-btn-office active py-2 rounded-lg text-sm font-medium border transition-colors w-1/2 bg-brand-50 text-brand-600 border-brand-200'; document.getElementById('btn-type-sewa').className = 'type-btn py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors w-1/2'; document.getElementById('rental-specifics').classList.add('hidden'); } else { document.getElementById('btn-type-sewa').className = 'type-btn active py-2 rounded-lg text-sm font-medium border transition-colors w-1/2 bg-orange-50 text-orange-600 border-orange-200'; document.getElementById('btn-type-beli').className = 'type-btn-office py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors w-1/2'; document.getElementById('rental-specifics').classList.remove('hidden'); } }
+    function handleAssetSubmit(e) { e.preventDefault(); showLoading(true); const formData = new FormData(document.getElementById('asset-form')); const data = Object.fromEntries(formData.entries()); const successHandler = (res) => { if (res.success) { resetAssetForm(); refreshData(); } else { alert("Error: " + res.message); showLoading(false); } }; if (data.id) google.script.run.withSuccessHandler(successHandler).apiUpdateInventory(data); else { if (!data.id) delete data.id; google.script.run.withSuccessHandler(successHandler).apiAddInventory(data); } }
+    function handleEmployeeSubmit(e) {
+        e.preventDefault();
+        showLoading(true);
+        const formData = new FormData(document.getElementById('employee-form'));
+        const data = Object.fromEntries(formData.entries());
+        // Remove assignment logic from here
+        google.script.run.withSuccessHandler((res) => {
+            if (res.success) {
+                document.getElementById('employee-form').reset();
+                refreshData();
+            } else {
+                alert("Error: " + res.message);
+                showLoading(false);
+            }
+        }).apiAddEmployee(data);
+    }
+
+    function openAssignModal(empId) {
+        const emp = employeeData.find(e => e.id == empId);
+        if (!emp) return;
+
+        document.getElementById('assign-emp-id').value = empId;
+        document.getElementById('assign-modal-subtitle').innerText = `Pilih aset untuk ${emp.name} (${emp.role})`;
+
+        const sel = document.getElementById('assign-asset-select');
+        sel.innerHTML = '<option value="" disabled selected>-- Memuat Aset... --</option>';
+
+        // Filter assets: Available AND same Company (or Global admin overrides?) -> Let's stick to same company for now
+        // And also include the currently assigned asset? No, this is for NEW assignment.
+        const availableAssets = inventoryData.filter(i => i.status === 'Available' && i.company === emp.company);
+
+        sel.innerHTML = '<option value="" disabled selected>-- Pilih Aset Tersedia --</option>';
+        if (availableAssets.length === 0) {
+            sel.innerHTML += '<option value="" disabled>Tidak ada aset tersedia di unit bisnis ini.</option>';
+        } else {
+            availableAssets.forEach(i => {
+                sel.innerHTML += `<option value="${i.id}">${i.brand} ${i.model} (${i.specs || i.serial})</option>`;
+            });
+        }
+
+        document.getElementById('assign-asset-modal').classList.remove('hidden');
+    }
+
+    function handleAssignSubmit(e) {
+        e.preventDefault();
+        const empId = document.getElementById('assign-emp-id').value;
+        const assetId = document.getElementById('assign-asset-select').value;
+
+        if (!assetId) { alert("Pilih aset terlebih dahulu!"); return; }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerText;
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
+        google.script.run.withSuccessHandler(res => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            if (res.success) {
+                document.getElementById('assign-asset-modal').classList.add('hidden');
+                refreshData();
+            } else {
+                alert("Error: " + res.message);
+            }
+        }).assignAssetToEmployee(empId, assetId);
+    }
+
+    function generateBAST(eid) { showLoading(true); google.script.run.withSuccessHandler(d => { showLoading(false); if (!d.asset) { alert("Karyawan ini belum memiliki aset."); return; } document.getElementById('bast-date').innerText = d.date; document.getElementById('bast-emp-name').innerText = `: ${d.employee.name}`; document.getElementById('bast-emp-role').innerText = `: ${d.employee.role}`; document.getElementById('bast-emp-dept').innerText = `: ${d.employee.company} / ${d.employee.department}`; document.getElementById('bast-sign-name').innerText = d.employee.name; document.getElementById('bast-header-company').innerText = d.employee.company || 'Headquarters'; document.getElementById('bast-asset-device').innerText = `${d.asset.brand} ${d.asset.model}`; document.getElementById('bast-asset-serial').innerText = d.asset.serial; const specs = [d.asset.processor, d.asset.ram, d.asset.storage].filter(Boolean).join(', '); document.getElementById('bast-asset-specs').innerText = specs || '-'; populateBASTAdminDropdown(); document.getElementById('bast-print-area').classList.remove('hidden'); }).getBASTData(eid); }
+
+    function populateBASTAdminDropdown() { const sel = document.getElementById('bast-admin-select'); sel.innerHTML = '<option value="">-- Pilih Admin --</option>'; masterData.filter(m => m.category === 'AdminSignatory').forEach(m => { sel.innerHTML += `<option value="${m.value}">${m.value}</option>`; }); }
+
+    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company'); const otherFormSel = document.getElementById('form-other-company'); const mobFormSel = document.getElementById('mob-form-company'); [invFormSel, empFormSel, otherFormSel, mobFormSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Unit Bisnis --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
+
+    function populateMasterDropdowns() {
+        const fill = (id, cat) => {
+            const el = document.getElementById(id);
+            if (el) {
+                const label = el.options[0].text;
+                el.innerHTML = `<option value="" disabled selected>${label}</option>`;
+                masterData.filter(m => m.category === cat).forEach(m => el.innerHTML += `<option value="${m.value}">${m.value}</option>`);
+            }
+        };
+        fill('form-brand', 'Brand');
+        fill('mob-form-brand', 'Brand');
+        fill('form-processor', 'Processor');
+
+        // Populate Datalist for Other Device Brand
+        const dl = document.getElementById('brand-list');
+        if (dl) {
+            dl.innerHTML = '';
+            const brands = masterData.filter(m => m.category === 'Brand').map(m => m.value);
+            [...new Set(brands)].sort().forEach(b => {
+                dl.innerHTML += `<option value="${b}">`;
+            });
+        }
+        fill('form-ram', 'RAM');
+        fill('mob-form-ram', 'RAM');
+        fill('form-storage', 'Storage');
+        fill('mob-form-storage', 'Storage');
+        fill('form-os', 'OS');
+        fill('mob-form-os', 'OS');
+        fill('form-office', 'Office');
+        fill('form-dept', 'Department');
+    }
+
+    function populateTicketReporters() { const sel = document.getElementById('ticket-reporter'); if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Pelapor --</option>'; employeeData.forEach(e => { sel.innerHTML += `<option value="${e.id}">${e.name} (${e.department})</option>`; }); } }
+
+    // --- RENTAL REPORT LOGIC ---
+    function renderRentalReport() {
+        const month = parseInt(document.getElementById('rental-month').value);
+        const year = parseInt(document.getElementById('rental-year').value);
+        const tbody = document.getElementById('rental-report-body');
+
+        if (!tbody) return; // Guard clause if element doesn't exist yet
+
+        tbody.innerHTML = '';
+
+        let totalCost = 0;
+        let totalUnit = 0;
+        const reportData = [];
+
+        // Filter valid rental assets for the selected period
+        inventoryData.forEach(item => {
+            // Must be 'Sewa'
+            if (item.type !== 'Sewa') return;
+            // Match Company Filter
+            if (activeCompany !== 'Global' && item.company !== activeCompany) return;
+
+            const cost = parseInt(item.rentalCost) || 0;
+            if (cost <= 0) return;
+
+            // Check if active in selected period
+            // Active if:
+            // 1. Rental Start <= Selected Period End
+            // 2. Rental End >= Selected Period Start OR Rental End is null (ongoing)
+
+            // Selected Period
+            const periodStart = new Date(year, month, 1);
+            const periodEnd = new Date(year, month + 1, 0); // Last day of month
+
+            // Asset Period
+            const assetStart = item.rentalStart ? new Date(item.rentalStart) : new Date(0); // Default to long ago if missing
+
+            // Handle Rental End Logic
+            // If rentalEnd is present, asset stops costing after that date.
+            // If assetStart > periodEnd, it hasn't started yet -> Skip
+            if (assetStart > periodEnd) return;
+
+            // If rentalEnd exists and is before periodStart, it has ended -> Skip
+            if (item.rentalEnd) {
+                const assetEnd = new Date(item.rentalEnd);
+                if (assetEnd < periodStart) return;
+            }
+
+            // If we are here, the asset was active during the month
+            totalCost += cost;
+            totalUnit++;
+
+            const emp = employeeData.find(e => e.assignedAssetId == item.id);
+            const userLoc = emp ? `${emp.name} (${emp.department})` : (item.assignedTo || item.company);
+
+            reportData.push({
+                ref: item.rentalRef || '-',
+                device: `${item.brand} ${item.model}`,
+                serial: item.serial,
+                user: userLoc,
+                vendor: item.vendor || '-',
+                period: `${item.rentalStart ? formatDate(item.rentalStart) : '?'} s/d ${item.rentalEnd ? formatDate(item.rentalEnd) : 'Now'}`,
+                cost: cost,
+                rawBrand: item.brand || 'Other'
+            });
+        });
+
+        if (reportData.length === 0) {
+            document.getElementById('rental-empty-msg').classList.remove('hidden');
+        } else {
+            document.getElementById('rental-empty-msg').classList.add('hidden');
+            reportData.forEach(d => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                        <td class="px-6 py-4 text-xs font-mono text-slate-600">${d.ref}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-800 text-sm">${d.device}</div>
+                            <div class="text-[11px] text-slate-500 font-mono">${d.serial}</div>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${d.user}</td>
+                        <td class="px-6 py-4 text-xs text-slate-600">${d.vendor}</td>
+                         <td class="px-6 py-4 text-[11px] text-slate-500">${d.period}</td>
+                        <td class="px-6 py-4 text-right font-mono text-sm font-bold text-slate-700">Rp ${d.cost.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('rental-total-cost').innerText = 'Rp ' + totalCost.toLocaleString('id-ID');
+        document.getElementById('rental-total-unit').innerText = totalUnit;
+
+        // Aggregate Brand Data for Chart
+        const brandCounts = {};
+        reportData.forEach(d => {
+            const brand = d.rawBrand || 'Other';
+            brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+        });
+
+        renderRentalBrandChart(brandCounts);
+    }
+
+    let rentalChartInstance = null;
+    function renderRentalBrandChart(brandCounts) {
+        const ctx = document.getElementById('rental-brand-chart');
+        if (!ctx) return;
+
+        if (rentalChartInstance) {
+            rentalChartInstance.destroy();
+        }
+
+        const brands = Object.keys(brandCounts);
+        const counts = Object.values(brandCounts);
+
+        // Colors
+        const colors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#64748b'
+        ];
+
+        // Custom Plugin for Data Labels
+        const dataLabelPlugin = {
+            id: 'dataLabels',
+            afterDatasetsDraw(chart, args, options) {
+                const { ctx } = chart;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) { // Only draw if value > 0
+                            ctx.fillStyle = '#ffffff'; // White text
+                            ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+
+                            // Calculate position: center of bar width, and just below the top of the bar
+                            // Actually, let's put it INSIDE the bar if possible, or on top if bar is small?
+                            // User example has it INSIDE the bar, white text.
+                            const x = bar.x;
+                            const y = bar.y + 15; // +15 to push it down into the bar
+
+                            ctx.fillText(data, x, y);
+                        }
+                    });
+                });
+            }
+        };
+
+        rentalChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: brands,
+                datasets: [{
+                    label: 'Unit Sewa',
+                    data: counts,
+                    backgroundColor: colors.slice(0, brands.length),
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f1f5f9',
+                            borderDash: [2, 4]
+                        },
+                        ticks: {
+                            precision: 0,
+                            font: { size: 10 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 10, weight: 'bold' }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return ` ${context.raw} Unit`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [dataLabelPlugin]
+        });
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+    }
+
+    function exportRentalReport() {
+        const month = document.getElementById('rental-month').options[document.getElementById('rental-month').selectedIndex].text;
+        const year = document.getElementById('rental-year').value;
+
+        const rows = [['No Ref', 'Device', 'Serial Number', 'User / Lokasi', 'Vendor', 'Periode Sewa', 'Biaya Sewa']];
+
+        // Re-run logic or scrape table? Re-running logic is safer/cleaner
+        // ... (Logic Duplicate - better to separate data gathering if complex, but here is simple)
+        // Let's iterate table rows for simplicity as data is already rendered
+        const trs = document.querySelectorAll('#rental-report-body tr');
+        trs.forEach(tr => {
+            const tds = tr.querySelectorAll('td');
+            if (tds.length > 0) {
+                rows.push([
+                    `"${tds[0].innerText}"`, // Ref
+                    `"${tds[1].querySelector('.font-bold').innerText}"`, // Device
+                    `"${tds[1].querySelector('.font-mono').innerText}"`, // Serial
+                    `"${tds[2].innerText}"`, // User
+                    `"${tds[3].innerText}"`, // Vendor
+                    `"${tds[4].innerText}"`, // Period
+                    `"${tds[5].innerText.replace('Rp ', '').replace(/\./g, '')}"` // Cost Raw
+                ]);
+            }
+        });
+
+        let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Laporan_Sewa_${activeCompany}_${month}_${year}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function renderInventoryTable() {
+        const search = document.getElementById('inv-search').value.toLowerCase();
+        const filterType = document.getElementById('filter-type').value;
+        const filterStatus = document.getElementById('filter-status').value;
+        const tbody = document.getElementById('inventory-table-body');
+        tbody.innerHTML = '';
+
+        const filtered = inventoryData.filter(item => {
+            const matchCompany = activeCompany === 'Global' || item.company === activeCompany;
+            const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search));
+            const matchesType = filterType === '' || item.type === filterType;
+            const matchesStatus = filterStatus === '' || item.status === filterStatus;
+            // Exclude items that have a specific Device Category (they belong to Other Device view)
+            const isMainAsset = !item.deviceCategory || item.deviceCategory === '' || item.deviceCategory === 'PC/Laptop';
+            return matchCompany && matchesSearch && matchesType && matchesStatus && isMainAsset;
+        });
+
+        if (filtered.length === 0) document.getElementById('inv-empty-msg').classList.remove('hidden');
+        else document.getElementById('inv-empty-msg').classList.add('hidden');
+
+        filtered.forEach(item => {
+            const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
+            const specsLine2 = `OS: ${item.os || '-'}`;
+            const specsLine3 = `Office: ${item.office || '-'}`;
+
+            let statusBadge = '';
+            if (item.status === 'Available') {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200 flex items-center w-fit gap-1"><i class="fa-solid fa-check"></i> Tersedia</span>`;
+            } else if (item.status === 'Assigned') {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold border border-blue-200 flex items-center w-fit gap-1"><i class="fa-solid fa-user"></i> Digunakan</span>`;
+            } else if (item.status === 'Broken') {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200 flex items-center w-fit gap-1"><i class="fa-solid fa-triangle-exclamation"></i> Rusak</span>`;
+            } else if (item.status === 'Lost') {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold border border-gray-200 flex items-center w-fit gap-1"><i class="fa-solid fa-question"></i> Hilang</span>`;
+            } else if (item.status === 'Return to Vendor') {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold border border-orange-200 flex items-center w-fit gap-1"><i class="fa-solid fa-arrow-rotate-left"></i> Dikembalikan</span>`;
+            } else {
+                statusBadge = `<span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200 flex items-center w-fit gap-1">${item.status}</span>`;
+            }
+
+            let tenantInfo = '';
+            if (item.type === 'Sewa') {
+                const endDate = item.rentalEnd ? new Date(item.rentalEnd).toLocaleDateString('id-ID') : '-';
+                tenantInfo = `<div class="flex flex-col"><span class="text-[11px] font-bold text-orange-500 flex items-center gap-1"><i class="fa-regular fa-clock"></i> Sewa</span><span class="text-[10px] text-slate-400">End: ${endDate}</span></div>`;
+            } else {
+                tenantInfo = `<span class="text-[11px] font-bold text-slate-400 flex items-center gap-1"><i class="fa-solid fa-building"></i> Kantor</span>`;
+            }
+            if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
+
+            const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`;
+            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+        });
+    }
+
+    function renderEmployeeTable() { const fullBody = document.getElementById('employee-table-body'); fullBody.innerHTML = ''; const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany); filteredEmps.forEach(emp => { fullBody.innerHTML += `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-sm font-medium text-slate-700">${emp.name}</td><td class="p-3 text-xs text-slate-500">${emp.company}</td><td class="p-3 text-xs text-slate-500">${emp.role}</td><td class="p-3 font-mono text-xs text-slate-600">${emp.assignedAssetId || '-'}</td><td class="p-3 text-right">${emp.assignedAssetId ? `<button onclick="generateBAST('${emp.id}')" class="text-brand-600 text-xs hover:underline">BAST</button>` : `<button onclick="openAssignModal('${emp.id}')" class="text-slate-400 text-xs hover:text-brand-600">Assign</button>`}</td></tr>`; }); }
+
+    function renderCostTable() {
+        const data = costAnalysisData;
+        const tbody = document.getElementById('cost-table-body');
+        tbody.innerHTML = '';
+
+        const vbody = document.getElementById('cost-validation-table-body');
+        if(vbody) vbody.innerHTML = '';
+        const budgetPerCompany = {};
+        employeeData.forEach(emp => {
+            if(!budgetPerCompany[emp.company]) budgetPerCompany[emp.company] = 0;
+            budgetPerCompany[emp.company] += (parseInt(emp.budget) || 0) * 12; // Annualize Employee Budget
+        });
+
+        const activeDevicesCount = {};
+        const yearStart = new Date(selectedGlobalYear, 0, 1);
+        const yearEnd = new Date(selectedGlobalYear, 11, 31);
+        
+        inventoryData.forEach(item => {
+            if (item.type !== 'Sewa') return;
+            const company = item.company || 'Unassigned';
+            
+            const cost = parseInt(item.rentalCost) || 0;
+            if (cost <= 0) return;
+            
+            const assetStart = item.rentalStart ? new Date(item.rentalStart) : new Date(0);
+            if (assetStart > yearEnd) return;
+            
+            if (item.rentalEnd) {
+                const assetEnd = new Date(item.rentalEnd);
+                if (assetEnd < yearStart) return;
+            }
+            if(!activeDevicesCount[company]) activeDevicesCount[company] = 0;
+            activeDevicesCount[company]++;
+        });
+
+        const monthlyTotals = new Array(12).fill(0);
+        let grandTotalAll = 0;
+        let totalValBudget = 0;
+        let totalValCost = 0;
+
+        Object.keys(data).forEach(comp => {
+            if (activeCompany !== 'Global' && comp !== activeCompany) return;
+            const vals = data[comp];
+
+            // Add to monthly totals
+            vals.forEach((v, i) => monthlyTotals[i] += v);
+
+            const total = vals.reduce((a, b) => a + b, 0);
+            grandTotalAll += total;
+
+            const cells = vals.map(v => `<td class="p-2 border border-slate-100 text-xs text-right text-slate-600">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
+            tbody.innerHTML += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-brand-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
+
+            if(vbody) {
+                const budgetStr = budgetPerCompany[comp] || 0;
+                const cost = total;
+                const remaining = budgetStr - cost;
+
+                totalValBudget += budgetStr;
+                totalValCost += cost;
+                
+                let statusBadge = '<span class="text-xs text-slate-400 font-bold">Unset</span>';
+                let barColor = 'bg-slate-200';
+                let percent = 0;
+
+                if (budgetStr > 0) {
+                    percent = Math.min((cost / budgetStr) * 100, 100);
+                    if (cost > budgetStr) {
+                        statusBadge = '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold border border-red-200">Over Budget</span>';
+                        barColor = 'bg-red-500';
+                    } else {
+                        statusBadge = '<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] font-bold border border-emerald-200">Aman</span>';
+                        barColor = 'bg-emerald-500';
+                    }
+                } else if (cost > 0) {
+                    statusBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] font-bold border border-yellow-200">No Budget</span>';
+                    barColor = 'bg-yellow-500';
+                    percent = 100;
+                }
+                
+                let remainingClass = remaining < 0 ? 'text-red-500 font-bold text-xs' : 'text-emerald-500 font-bold text-xs';
+                if (budgetStr === 0) remainingClass = 'text-slate-400 text-xs';
+
+                const deviceCount = activeDevicesCount[comp] || 0;
+                vbody.innerHTML += `
+                    <tr onclick="openCostBreakdownModal('${comp}')" class="hover:bg-indigo-50 border-b border-slate-50 transition-colors cursor-pointer group">
+                        <td class="p-3 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors"><i class="fa-solid fa-magnifying-glass-chart mr-1 opacity-0 group-hover:opacity-100 transition-opacity"></i> ${comp}</td>
+                        <td class="p-3 text-xs font-mono text-slate-600 text-center">${deviceCount} Unit</td>
+                        <td class="p-3 text-xs font-mono text-slate-600 text-right">${budgetStr > 0 ? 'Rp ' + budgetStr.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-3 text-xs font-mono text-slate-800 font-bold text-right">${cost > 0 ? 'Rp ' + cost.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-3 font-mono text-right ${remainingClass}">${budgetStr > 0 ? (remaining < 0 ? '- Rp ' + Math.abs(remaining).toLocaleString('id-ID') : '+ Rp ' + remaining.toLocaleString('id-ID')) : '-'}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                        <td class="p-3 pl-6 pr-4">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="${barColor} h-full" style="width: ${percent}%"></div>
+                                </div>
+                                <span class="text-[10px] text-slate-500 font-bold w-8 text-right">${Math.round(percent)}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        if(vbody && activeCompany === 'Global') {
+            const totRemaining = totalValBudget - totalValCost;
+            const totalAllDevices = Object.values(activeDevicesCount).reduce((a, b) => a + b, 0);
+            let percentT = 0; if (totalValBudget > 0) percentT = Math.min((totalValCost / totalValBudget) * 100, 100);
+            vbody.innerHTML += `
+                <tr class="bg-slate-50 border-t-2 border-slate-200">
+                    <td class="p-3 text-xs font-extrabold text-slate-900">GRAND TOTAL</td>
+                    <td class="p-3 text-xs font-mono font-bold text-slate-900 text-center">${totalAllDevices} Unit</td>
+                    <td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValBudget > 0 ? 'Rp ' + totalValBudget.toLocaleString('id-ID') : '-'}</td>
+                    <td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValCost > 0 ? 'Rp ' + totalValCost.toLocaleString('id-ID') : '-'}</td>
+                    <td class="p-3 text-xs font-mono font-bold text-right ${totRemaining < 0 ? 'text-red-600' : 'text-emerald-600'}">${totalValBudget > 0 ? (totRemaining < 0 ? '- Rp ' + Math.abs(totRemaining).toLocaleString('id-ID') : '+ Rp ' + totRemaining.toLocaleString('id-ID')) : '-'}</td>
+                    <td class="p-3 text-center"></td>
+                    <td class="p-3 pl-6 pr-4 text-right text-[11px] font-bold text-slate-600">${Math.round(percentT)}% Used</td>
+                </tr>
+            `;
+        }
+
+        // Render Total Row
+        const totalCells = monthlyTotals.map(v => `<td class="p-2 border border-slate-200 text-xs text-right font-bold text-slate-900 bg-slate-100">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
+        tbody.innerHTML += `<tr class="border-t-2 border-slate-300">
+            <td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>
+            ${totalCells}
+            <td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-white bg-slate-800">${grandTotalAll.toLocaleString('id-ID')}</td>
+        </tr>`;
+    }
+
+    function openCostBreakdownModal(company) {
+        document.getElementById('cost-breakdown-title').innerText = `Breakdown Biaya Sewa: ${company}`;
+        document.getElementById('cost-breakdown-year').innerText = `Tahun ${selectedGlobalYear}`;
+        
+        const tbody = document.getElementById('cost-breakdown-table-body');
+        const emptyMsg = document.getElementById('cost-breakdown-empty');
+        tbody.innerHTML = '';
+        
+        const yearStart = new Date(selectedGlobalYear, 0, 1);
+        const yearEnd = new Date(selectedGlobalYear, 11, 31);
+        
+        // Use costAnalysisData[company] total for the exact project total (calculated by backend)
+        const vals = costAnalysisData[company] || [];
+        const totalYearlyCost = vals.reduce((a, b) => a + b, 0);
+
+        const filtered = inventoryData.filter(item => {
+            if (item.type !== 'Sewa') return false;
+            if (item.company !== company) return false;
+            
+            const cost = parseInt(item.rentalCost) || 0;
+            if (cost <= 0) return false;
+            
+            const assetStart = item.rentalStart ? new Date(item.rentalStart) : new Date(0);
+            if (assetStart > yearEnd) return false;
+            
+            if (item.rentalEnd) {
+                const assetEnd = new Date(item.rentalEnd);
+                if (assetEnd < yearStart) return false;
+            }
+            return true;
+        });
+        
+        if (filtered.length === 0) {
+            emptyMsg.classList.remove('hidden');
+        } else {
+            emptyMsg.classList.add('hidden');
+            
+            filtered.forEach(item => {
+                const emp = employeeData.find(e => String(e.assignedAssetId) === String(item.id));
+                const userName = emp ? `${emp.name} (${emp.department})` : (item.assignedTo || 'Unassigned / Spare');
+                const period = `${item.rentalStart ? formatDate(item.rentalStart) : '?'} s/d ${item.rentalEnd ? formatDate(item.rentalEnd) : 'Ongoing'}`;
+                const cost = parseInt(item.rentalCost) || 0;
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition-colors">
+                        <td class="p-3 align-top">
+                            <div class="font-bold text-xs text-slate-800">${item.brand} ${item.model}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">SN: ${item.serial}</div>
+                        </td>
+                        <td class="p-3 align-top text-xs font-semibold text-slate-700">${userName}</td>
+                        <td class="p-3 align-top text-xs text-slate-700">${item.vendor || '-'}</td>
+                        <td class="p-3 align-top text-[11px] text-slate-500">${period}</td>
+                        <td class="p-3 align-top text-xs font-mono font-bold text-slate-800 text-right whitespace-nowrap">Rp ${cost.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        document.getElementById('cost-breakdown-total').innerText = 'Rp ' + totalYearlyCost.toLocaleString('id-ID');
+        document.getElementById('cost-breakdown-modal').classList.remove('hidden');
+    }
+    
+    function closeCostBreakdownModal() {
+        document.getElementById('cost-breakdown-modal').classList.add('hidden');
+    }
+
+    function setAssetType(type) {
+        document.getElementById('form-type-input').value = type;
+        const btnBeli = document.getElementById('btn-type-beli');
+        const btnSewa = document.getElementById('btn-type-sewa');
+        const rentalSpecifics = document.getElementById('rental-specifics');
+        const officeSpecifics = document.getElementById('office-specifics');
+
+        const activeBeli = "w-full py-2 rounded-lg text-sm font-bold border bg-indigo-50 text-indigo-600 border-indigo-200 transition-all";
+        const activeSewa = "w-full py-2 rounded-lg text-sm font-bold border bg-orange-50 text-orange-600 border-orange-200 transition-all";
+        const inactive = "w-full py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all";
+
+        if (type === 'Beli') {
+            btnBeli.className = activeBeli;
+            btnSewa.className = inactive;
+            if (rentalSpecifics) rentalSpecifics.classList.add('hidden');
+            if (officeSpecifics) officeSpecifics.classList.remove('hidden');
+        } else {
+            btnSewa.className = activeSewa;
+            btnBeli.className = inactive;
+            if (rentalSpecifics) rentalSpecifics.classList.remove('hidden');
+            if (officeSpecifics) officeSpecifics.classList.add('hidden');
+        }
+    }
+
+    function handleAssetSubmit(e) {
+        e.preventDefault();
+        showLoading(true);
+        const formData = new FormData(document.getElementById('asset-form'));
+        const data = Object.fromEntries(formData.entries());
+
+        // Sanitize rentalCost (remove dots)
+        if (data.rentalCost) {
+            data.rentalCost = data.rentalCost.replace(/\./g, '');
+        }
+
+        const successHandler = (res) => {
+            if (res.success) {
+                resetAssetForm();
+                refreshData();
+            } else {
+                alert("Error: " + res.message);
+                showLoading(false);
+            }
+        };
+
+        if (data.id) google.script.run.withSuccessHandler(successHandler).apiUpdateInventory(data);
+        else {
+            if (!data.id) delete data.id;
+            google.script.run.withSuccessHandler(successHandler).apiAddInventory(data);
+        }
+    }
+
+    function editInventoryItem(id) {
+        const item = inventoryData.find(i => i.id == id);
+        if (!item) return;
+
+        switchAssetTab('details'); // Reset to details tab
+
+        document.getElementById('asset-id').value = item.id;
+        document.getElementById('form-company').value = item.company;
+
+        // Handle Category (PC/Laptop)
+        const catEl = document.getElementById('form-category');
+        if (catEl) catEl.value = item.deviceCategory || '';
+
+        setAssetType(item.type);
+        document.getElementById('form-serial').value = item.serial;
+        document.getElementById('form-brand').value = item.brand;
+        document.getElementById('form-processor').value = item.processor || '';
+        document.getElementById('form-model').value = item.model;
+        document.getElementById('form-ram').value = item.ram || '';
+        document.getElementById('form-storage').value = item.storage || '';
+        document.getElementById('form-os').value = item.os || '';
+        document.getElementById('form-office').value = item.office || '';
+        document.getElementById('form-software').value = item.software || '';
+        document.getElementById('form-purchase-date').value = item.purchaseDate || '';
+
+        document.getElementById('form-location').value = item.location || item.gisLocation || '';
+        if (item.type === 'Sewa') {
+            document.getElementById('form-rental-ref').value = item.rentalRef || '';
+            document.getElementById('form-vendor').value = item.vendor || '';
+            document.getElementById('form-rental-cost').value = item.rentalCost ? parseInt(item.rentalCost).toLocaleString('id-ID') : '';
+            if (item.rentalStart) document.getElementById('form-rental-start').value = item.rentalStart.split('T')[0];
+            if (item.rentalEnd) document.getElementById('form-rental-end').value = item.rentalEnd.split('T')[0];
+        }
+        document.getElementById('form-title').innerText = "Edit Aset";
+        document.getElementById('btn-submit-asset').innerText = "Update Aset";
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+        // Preserve status
+        // Preserve status
+        const statusInput = document.getElementById('form-status');
+        if (statusInput) statusInput.value = item.status || 'Available';
+
+        // Handle Offboard Button Visibility
+        const btnOffboard = document.getElementById('btn-offboard');
+        if (item.status === 'Assigned' || item.type === 'Sewa') {
+            // Show offboard if assigned OR if it's a rental (to return it)
+            btnOffboard.classList.remove('hidden');
+        } else {
+            btnOffboard.classList.add('hidden');
+        }
+
+        document.querySelector('#inventory').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function switchAssetTab(tab) {
+        const details = document.getElementById('asset-tab-details');
+        const history = document.getElementById('asset-tab-history');
+        const btnDetails = document.getElementById('tab-btn-details');
+        const btnHistory = document.getElementById('tab-btn-history');
+
+        const activeClass = 'text-brand-600 border-b-2 border-brand-600 bg-brand-50/50';
+        const inactiveClass = 'text-slate-400 hover:text-slate-600';
+
+        if (tab === 'details') {
+            details.classList.remove('hidden');
+            history.classList.add('hidden');
+            btnDetails.className = 'flex-1 py-3 text-sm font-bold ' + activeClass;
+            btnHistory.className = 'flex-1 py-3 text-sm font-bold ' + inactiveClass;
+        } else {
+            details.classList.add('hidden');
+            history.classList.remove('hidden');
+            btnDetails.className = 'flex-1 py-3 text-sm font-bold ' + inactiveClass;
+            btnHistory.className = 'flex-1 py-3 text-sm font-bold ' + activeClass;
+
+            // Load history
+            const assetId = document.getElementById('asset-id').value;
+            if (assetId) renderAssetHistory(assetId, 'asset-history-list');
+        }
+    }
+
+    function deleteInventoryItem(id) { if (!confirm("Hapus aset ini?")) return; showLoading(true); google.script.run.withSuccessHandler((res) => { if (res.success) refreshData(); else { alert(res.message); showLoading(false); } }).apiDeleteInventory(id); }
+    function resetAssetForm() {
+        document.getElementById('asset-form').reset();
+        document.getElementById('asset-id').value = "";
+        setAssetType('Beli');
+
+        const statusEl = document.getElementById('form-status');
+        if (statusEl) statusEl.value = 'Available';
+
+        document.getElementById('form-title').innerText = "Tambah Aset";
+        document.getElementById('btn-submit-asset').innerText = "Simpan";
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+        document.getElementById('btn-offboard').classList.add('hidden');
+        switchAssetTab('details');
+    }
+    function populateOnboardingAssets() { const company = document.getElementById('emp-form-company').value; const sel = document.getElementById('onboard-asset-select'); sel.innerHTML = '<option value="">-- Pilih Laptop --</option>'; if (!company) return; inventoryData.filter(i => i.status === 'Available' && i.company === company).forEach(i => { sel.innerHTML += `<option value="${i.id}">${i.brand} ${i.model} (${i.serial})</option>`; }); }
+    function loadConfigValues() { const warnObj = (configData.find(c => c[0] === 'RentalWarning') || [null, 30])[1]; document.getElementById('config-rental-warning').value = warnObj; }
+    function saveConfig(key, val) { google.script.run.withSuccessHandler(() => { console.log("Config Saved"); }).apiSaveConfig(key, val); }
+    function renderConfiguration() {
+        // Debugging Vendor Card
+        const vendorContainer = document.getElementById('config-vendor-card');
+        if (!vendorContainer) console.warn("Vendor Container Not Found!");
+
+        renderConfigCard('config-users-card', 'User Management', 'User', 'fa-users', true);
+        document.getElementById('config-rental-warning').value = configData.find(c => c.key === 'RentalWarning')?.value || 30;
+        renderConfigCard('config-admin-card', 'Admin Penandatangan BAST', 'AdminSignatory', 'fa-file-signature');
+        renderConfigCard('config-vendor-card', 'Data Vendor', 'Vendor', 'fa-shop', 'Vendor Name');
+        renderConfigCard('config-brand-card', 'Merk / Brand Device', 'Brand', 'fa-tag', 'Brand Name');
+        // Store Brand Removed
+        renderConfigCard('config-processor-card', 'Tipe Processor', 'Processor', 'fa-microchip', 'Core i5, Ryzen 5...');
+        renderConfigCard('config-ram-card', 'Kapasitas RAM', 'RAM', 'fa-memory', '8GB, 16GB...');
+        renderConfigCard('config-storage-card', 'Kapasitas Storage', 'Storage', 'fa-hard-drive', '256GB SSD...');
+        renderConfigCard('config-os-card', 'Operating System', 'OS', 'fa-desktop', 'Windows 10, macOS...');
+        renderConfigCard('config-office-card', 'Versi MS Office', 'Office', 'fa-file-word', '2019, 365...');
+        renderConfigCard('config-company-card', 'Daftar Unit Bisnis (PT)', 'Company', 'fa-building', 'PT Name');
+        renderConfigCard('config-dept-card', 'Daftar Departemen', 'Department', 'fa-users-rectangle', 'IT, HR...');
+
+        renderUserManagementCard();
+
+        // Add System Repair Section (e.g., at the bottom of config list)
+        // Check if container exists? No, I'll inject a button at the top of configuration page
+        const header = document.querySelector('#configuration h3');
+        if (header && !document.getElementById('btn-repair-db')) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-repair-db';
+            btn.className = 'ml-auto text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1 px-3 rounded flex items-center gap-2';
+            btn.innerHTML = '<i class="fa-solid fa-wrench"></i> Fix Database';
+            btn.onclick = handleRepairDatabase;
+            header.parentElement.appendChild(btn); // Assuming header is in a flex container title
+            // Actually header is <h3> inside section.
+            // Let's modify handleRepairDatabase to be global.
+        }
+    }
+
+    function handleRepairDatabase() {
+        if (confirm("Jalankan perbaikan database? Ini akan menyinkronkan kolom sheet.")) {
+            showLoading(true);
+            google.script.run.withSuccessHandler(() => {
+                alert("Database berhasil diperbaiki!");
+                showLoading(false);
+                refreshData();
+            }).apiSetupDatabase(); // Use the exposed API
+        }
+    }
+
+    function renderUserManagementCard() {
+        if (currentUser.role !== 'admin') return; // Only admin can see this
+
+        const container = document.getElementById('config-users-card');
+        if (!container) return;
+
+        let userListHtml = '';
+        const users = window.usersData || [];
+        users.forEach(u => {
+            userListHtml += `
+                <div class="flex justify-between items-center p-3 border-b border-slate-50 last:border-0 hover:bg-slate-50">
+                    <div>
+                        <div class="text-sm font-bold text-slate-700">${u.name}</div>
+                        <div class="text-xs text-slate-500">@${u.username} • <span class="uppercase font-semibold text-brand-600">${u.role}</span></div>
+                    </div>
+                    <button onclick="deleteUser('${u.username}')" class="text-slate-400 hover:text-red-600 transition-colors w-8 h-8 rounded flex items-center justify-center border border-transparent hover:border-red-100 hover:bg-red-50">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="config-card">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="fa-solid fa-users-gear text-slate-500"></i>
+                    <h3 class="font-bold text-slate-800">User Management</h3>
+                </div>
+                
+                <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 mb-4">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Tambah User Baru</label>
+                    <form id="add-user-form" onsubmit="handleAddUser(event)" class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div class="md:col-span-3">
+                            <input type="text" name="username" placeholder="Username" required class="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500">
+                        </div>
+                        <div class="md:col-span-3">
+                            <input type="text" name="password" placeholder="Password" required class="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500">
+                        </div>
+                        <div class="md:col-span-3">
+                            <input type="text" name="name" placeholder="Nama Lengkap" required class="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <select name="role" class="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500 bg-white">
+                                <option value="user">User (View)</option>
+                                <option value="admin">Admin (Full)</option>
+                            </select>
+                        </div>
+                         <div class="md:col-span-1">
+                            <button type="submit" class="w-full h-full bg-brand-600 text-white rounded hover:bg-brand-700 flex items-center justify-center">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
+                    ${userListHtml || '<div class="p-4 text-center text-xs text-slate-400">Belum ada user tambahan.</div>'}
+                </div>
+            </div>
+        `;
+    }
+
+    function handleAddUser(e) {
+        e.preventDefault();
+        showLoading(true);
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        // Simple ID generation client side or backend? Backend usually handles it but apiAddUser wrapper calls addRow.
+        // addRow typically needs an ID if we want to delete later using ID.
+        // Let's generate a simple ID here or rely on backend. 
+        // For consistency with other entities, let's add an ID here.
+        data.id = 'usr_' + Date.now();
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                e.target.reset();
+                refreshData();
+            } else {
+                alert(res.message);
+                showLoading(false);
+            }
+        }).apiAddUser(data);
+    }
+
+    function deleteUser(username) {
+        if (!confirm(`Hapus user "${username}"?`)) return;
+        showLoading(true);
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                refreshData();
+            } else {
+                alert(res.message);
+                showLoading(false);
+            }
+        }).apiDeleteUser(username);
+    }
+
+    function renderConfigCard(containerId, title, category, icon, placeholder) {
+        const container = document.getElementById(containerId);
+        if (!container) return; // Guard against missing container
+        const items = masterData.filter(m => m.category === category);
+        const isLongText = category === 'Company' || category === 'Department' || category === 'Office' || category === 'AdminSignatory';
+        const itemsContainerClass = isLongText ? 'flex flex-col gap-2 mt-3' : 'flex flex-wrap gap-2 mt-3';
+        let tagsHtml = '';
+        if (isLongText) {
+            items.forEach(item => {
+                tagsHtml += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100 text-xs font-semibold text-slate-700">${item.value}<button onclick="deleteMasterItem('${category}', '${item.value}')" class="text-slate-400 hover:text-red-500 px-2"><i class="fa-solid fa-xmark"></i></button></div>`;
+            });
+        } else {
+            items.forEach(item => {
+                tagsHtml += `<div class="tag-item">${item.value}<span class="close-btn" onclick="deleteMasterItem('${category}', '${item.value}')"><i class="fa-solid fa-xmark"></i></span></div>`;
+            });
+        }
+
+        let iconHtml = icon ? `<i class="${icon} text-slate-500 mr-2"></i>` : '';
+        // If placeholder is undefined (old usage), default it
+        if (!placeholder) placeholder = `Tambah ${category}`;
+
+        container.innerHTML = `<div class="config-card h-full">
+            <h3 class="font-bold text-slate-800 mb-3 flex items-center">${iconHtml}${title}</h3>
+            <div class="flex gap-2">
+                <input type="text" id="input-${category}" class="flex-1 p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500" placeholder="${placeholder}" onkeypress="handleMasterInputKey(event, '${category}')">
+                <button onclick="addMasterItem('${category}')" class="bg-brand-600 text-white px-3 rounded hover:bg-brand-700"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="${itemsContainerClass}">${tagsHtml}</div>
+        </div>`;
+    }
+
+    function handleMasterInputKey(e, category) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addMasterItem(category);
+        }
+    }
+
+    function addMasterItem(category) { const input = document.getElementById(`input-${category}`); const val = input.value.trim(); if (!val) return; showLoading(true); google.script.run.withSuccessHandler((res) => { if (res.success) { refreshData(); } else { alert(res.message); showLoading(false); } }).apiAddMasterData(category, val); }
+    function deleteMasterItem(category, val) { if (!confirm(`Hapus "${val}" dari ${category}?`)) return; showLoading(true); google.script.run.withSuccessHandler((res) => { if (res.success) { refreshData(); } else { alert(res.message); showLoading(false); } }).apiDeleteMasterData(category, val); }
+    function showSection(id) {
+        document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
+        const section = document.getElementById(id);
+        if (section) section.classList.remove('hidden');
+
+        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+
+        // Handle Nav Highlights
+        let navId = 'nav-' + id;
+        if (id === 'cost-analysis') navId = 'nav-cost';
+
+        const active = document.getElementById(navId);
+        if (active) {
+            active.classList.add('active');
+            const span = active.querySelector('span');
+            if (span) document.getElementById('header-title').innerText = span.innerText;
+        }
+
+        // Specific Section Logic
+        if (id === 'inventory') {
+            if (typeof resetAssetForm === 'function') resetAssetForm();
+        }
+    }
+    function showLoading(show) { document.getElementById('loading-indicator').classList.toggle('hidden', !show); }
+
+    function formatCurrency(input) {
+        // Remove non-numeric characters
+        let value = input.value.replace(/\D/g, '');
+
+        // If empty, set empty
+        if (value === '') {
+            input.value = '';
+            return;
+        }
+
+        // Format with thousands separator using ID locale
+        input.value = parseInt(value, 10).toLocaleString('id-ID');
+    }
+    function formatCurrency(input) {
+        // Remove non-numeric chars
+        let value = input.value.replace(/\D/g, '');
+
+        // Convert to number and locale string if valid
+        if (value !== '') {
+            value = parseInt(value, 10).toLocaleString('id-ID');
+        }
+
+        input.value = value;
+    }
+
+    // --- MOBILE DEVICE LOGIC ---
+    function renderMobileDeviceTable() {
+        const search = document.getElementById('mob-search').value.toLowerCase();
+        const filterType = document.getElementById('mob-filter-type').value;
+        const filterStatus = document.getElementById('mob-filter-status').value;
+        const tbody = document.getElementById('mobile-table-body');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+
+        const filtered = inventoryData.filter(item => {
+            const matchCompany = activeCompany === 'Global' || item.company === activeCompany;
+            const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search)) || (item.model && item.model.toLowerCase().includes(search));
+            const matchesType = filterType === '' || item.type === filterType;
+            const matchesStatus = filterStatus === '' || item.status === filterStatus;
+            
+            // EXACT MATCH FOR MOBILE DEVICE CATEGORY
+            const isMobileAsset = item.deviceCategory === 'Mobile Device';
+            
+            return matchCompany && matchesSearch && matchesType && matchesStatus && isMobileAsset;
+        });
+
+        if (filtered.length === 0) document.getElementById('mob-empty-msg').classList.remove('hidden');
+        else document.getElementById('mob-empty-msg').classList.add('hidden');
+
+        filtered.forEach(item => {
+            const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
+            const specsLine2 = `OS: ${item.os || '-'}`;
+
+            let statusBadge = '';
+            if (item.status === 'Available') statusBadge = `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200"><i class="fa-solid fa-check"></i> Tersedia</span>`;
+            else if (item.status === 'Assigned') statusBadge = `<span class="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold border border-blue-200"><i class="fa-solid fa-user"></i> Digunakan</span>`;
+            else if (item.status === 'Broken') statusBadge = `<span class="px-3 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200"><i class="fa-solid fa-triangle-exclamation"></i> Rusak</span>`;
+            else if (item.status === 'Lost') statusBadge = `<span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold border border-gray-200"><i class="fa-solid fa-question"></i> Hilang</span>`;
+            else if (item.status === 'Return to Vendor') statusBadge = `<span class="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold border border-orange-200"><i class="fa-solid fa-arrow-rotate-left"></i> Dikembalikan</span>`;
+            else statusBadge = `<span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">${item.status}</span>`;
+
+            let tenantInfo = '';
+            if (item.type === 'Sewa') {
+                const endDate = item.rentalEnd ? new Date(item.rentalEnd).toLocaleDateString('id-ID') : '-';
+                tenantInfo = `<div class="flex flex-col"><span class="text-[11px] font-bold text-orange-500"><i class="fa-regular fa-clock"></i> Sewa</span><span class="text-[10px] text-slate-400">End: ${endDate}</span></div>`;
+            } else {
+                tenantInfo = `<span class="text-[11px] font-bold text-slate-400"><i class="fa-solid fa-building"></i> Kantor</span>`;
+            }
+            if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
+
+            const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editMobileDevice('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`;
+            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+        });
+    }
+
+    function switchMobileTab(tab) {
+        const details = document.getElementById('mob-asset-tab-details');
+        const history = document.getElementById('mob-asset-tab-history');
+        const btnDetails = document.getElementById('mob-tab-btn-details');
+        const btnHistory = document.getElementById('mob-tab-btn-history');
+
+        const activeClass = 'text-brand-600 border-b-2 border-brand-600 bg-brand-50/50';
+        const inactiveClass = 'text-slate-400 hover:text-slate-600';
+
+        if (tab === 'details') {
+            details.classList.remove('hidden');
+            history.classList.add('hidden');
+            btnDetails.className = 'flex-1 py-3 text-sm font-bold ' + activeClass;
+            btnHistory.className = 'flex-1 py-3 text-sm font-bold ' + inactiveClass;
+        } else {
+            details.classList.add('hidden');
+            history.classList.remove('hidden');
+            btnDetails.className = 'flex-1 py-3 text-sm font-bold ' + inactiveClass;
+            btnHistory.className = 'flex-1 py-3 text-sm font-bold ' + activeClass;
+
+            const assetId = document.getElementById('mob-asset-id').value;
+            if (assetId) renderAssetHistory(assetId, 'mob-asset-history-list');
+        }
+    }
+
+    function setMobileAssetType(type) {
+        document.getElementById('mob-form-type-input').value = type;
+        const btnBeli = document.getElementById('mob-btn-type-beli');
+        const btnSewa = document.getElementById('mob-btn-type-sewa');
+        const rentalSpecifics = document.getElementById('mob-rental-specifics');
+        const officeSpecifics = document.getElementById('mob-office-specifics');
+
+        const activeBeli = "w-full py-2 rounded-lg text-sm font-bold border bg-indigo-50 text-indigo-600 border-indigo-200 transition-all";
+        const activeSewa = "w-full py-2 rounded-lg text-sm font-bold border bg-orange-50 text-orange-600 border-orange-200 transition-all";
+        const inactive = "w-full py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all";
+
+        if (type === 'Beli') {
+            btnBeli.className = activeBeli;
+            btnSewa.className = inactive;
+            if (rentalSpecifics) rentalSpecifics.classList.add('hidden');
+            if (officeSpecifics) officeSpecifics.classList.remove('hidden');
+        } else {
+            btnSewa.className = activeSewa;
+            btnBeli.className = inactive;
+            if (rentalSpecifics) rentalSpecifics.classList.remove('hidden');
+            if (officeSpecifics) officeSpecifics.classList.add('hidden');
+        }
+    }
+
+    function resetMobileForm() {
+        document.getElementById('mob-asset-form').reset();
+        document.getElementById('mob-asset-id').value = "";
+        setMobileAssetType('Beli');
+        const statusEl = document.getElementById('mob-form-status');
+        if (statusEl) statusEl.value = 'Available';
+        document.getElementById('mob-form-title').innerText = "Tambah Aset Mobile";
+        document.getElementById('mob-btn-submit-asset').innerText = "Simpan";
+        document.getElementById('mob-btn-cancel-edit').classList.add('hidden');
+        document.getElementById('mob-btn-offboard').classList.add('hidden');
+        switchMobileTab('details');
+    }
+
+    function editMobileDevice(id) {
+        const item = inventoryData.find(i => i.id == id);
+        if (!item) return;
+
+        switchMobileTab('details');
+        document.getElementById('mob-asset-id').value = item.id;
+        document.getElementById('mob-form-company').value = item.company;
+        document.getElementById('mob-form-category').value = item.deviceCategory || 'Mobile Device';
+        setMobileAssetType(item.type);
+        document.getElementById('mob-form-serial').value = item.serial;
+        document.getElementById('mob-form-brand').value = item.brand;
+        document.getElementById('mob-form-processor').value = item.processor || '';
+        document.getElementById('mob-form-model').value = item.model;
+        document.getElementById('mob-form-ram').value = item.ram || '';
+        document.getElementById('mob-form-storage').value = item.storage || '';
+        document.getElementById('mob-form-os').value = item.os || '';
+        document.getElementById('mob-form-purchase-date').value = item.purchaseDate || '';
+        document.getElementById('mob-form-location').value = item.location || item.gisLocation || '';
+        
+        if (item.type === 'Sewa') {
+            document.getElementById('mob-form-rental-ref').value = item.rentalRef || '';
+            document.getElementById('mob-form-vendor').value = item.vendor || '';
+            document.getElementById('mob-form-rental-cost').value = item.rentalCost ? parseInt(item.rentalCost).toLocaleString('id-ID') : '';
+            if (item.rentalStart) document.getElementById('mob-form-rental-start').value = item.rentalStart.split('T')[0];
+            if (item.rentalEnd) document.getElementById('mob-form-rental-end').value = item.rentalEnd.split('T')[0];
+        }
+        
+        document.getElementById('mob-form-title').innerText = "Edit Aset Mobile";
+        document.getElementById('mob-btn-submit-asset').innerText = "Update Aset";
+        document.getElementById('mob-btn-cancel-edit').classList.remove('hidden');
+        
+        const statusInput = document.getElementById('mob-form-status');
+        if (statusInput) statusInput.value = item.status || 'Available';
+
+        const btnOffboard = document.getElementById('mob-btn-offboard');
+        if (item.status === 'Assigned' || item.type === 'Sewa') {
+            btnOffboard.classList.remove('hidden');
+        } else {
+            btnOffboard.classList.add('hidden');
+        }
+
+        document.querySelector('#mobiledevice').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function handleMobileSubmit(e) {
+        e.preventDefault();
+        showLoading(true);
+        const formData = new FormData(document.getElementById('mob-asset-form'));
+        const data = Object.fromEntries(formData.entries());
+
+        if (data.rentalCost) data.rentalCost = data.rentalCost.replace(/\./g, '');
+
+        const successHandler = (res) => {
+            if (res.success) {
+                resetMobileForm();
+                refreshData(); // this also redraws the table
+            } else {
+                alert("Error: " + res.message);
+                showLoading(false);
+            }
+        };
+
+        if (data.id) google.script.run.withSuccessHandler(successHandler).apiUpdateInventory(data);
+        else {
+            if (!data.id) delete data.id;
+            google.script.run.withSuccessHandler(successHandler).apiAddInventory(data);
+        }
+    }
+</script>

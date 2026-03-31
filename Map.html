@@ -1,0 +1,859 @@
+<!-- GIS VIEW -->
+<section id="gis" class="page-section hidden h-full w-full relative">
+    <style>
+        /* Scoped styles for GIS Section */
+        #gis {
+            --bg-dark: #020617;
+            --sidebar-bg: rgba(15, 23, 42, 0.65);
+            --card-bg: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-gold: #fbbf24;
+            --accent-glow: rgba(251, 191, 36, 0.3);
+            --border-color: rgba(255, 255, 255, 0.08);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            overflow: hidden;
+            background: var(--bg-dark);
+        }
+
+        /* MAP CONTAINER */
+        #gis #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            z-index: 1;
+            background: #111;
+        }
+
+        /* SIDEBAR STYLING */
+        #gis .sidebar-card {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 380px;
+            height: calc(100% - 40px);
+            background: var(--sidebar-bg);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        #gis .sidebar-header {
+            padding: 30px;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.03), transparent);
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        #gis .sidebar-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-gold);
+            box-shadow: 0 0 15px var(--accent-gold);
+        }
+
+        #gis h1 {
+            margin: 0;
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            background: linear-gradient(90deg, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #gis .subtitle {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 13px;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #gis .subtitle::before {
+            content: '●';
+            font-size: 8px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* CONTENT AREA */
+        #gis .sidebar-content {
+            padding: 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        #gis .sidebar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #gis .sidebar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #gis .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        #gis .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* DROPDOWN */
+        #gis .filter-box {
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 50;
+        }
+
+        #gis .custom-dropdown {
+            position: relative;
+            width: 100%;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        #gis .dropdown-selected {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        #gis .dropdown-selected:hover {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.1);
+        }
+
+        #gis .dropdown-selected span {
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-size: 15px;
+            text-transform: uppercase;
+        }
+
+        #gis .dropdown-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--accent-gold);
+        }
+
+        #gis .custom-dropdown.open .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        #gis .dropdown-options {
+            position: absolute;
+            top: 110%;
+            left: 0;
+            width: 100%;
+            background: rgba(10, 15, 30, 0.95);
+            border: 1px solid var(--accent-gold);
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            z-index: 100;
+        }
+
+        #gis .custom-dropdown.open .dropdown-options {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        #gis .dropdown-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        #gis .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        #gis .dropdown-item:hover {
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
+            color: #fff;
+            padding-left: 25px;
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        #gis .dropdown-item.active {
+            color: var(--accent-gold);
+            font-weight: bold;
+            background: rgba(251, 191, 36, 0.05);
+        }
+
+        /* STATS CARDS */
+        #gis .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+
+        #gis .stat-card {
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #gis .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        #gis .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        #gis .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        #gis .stat-val {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        #gis .stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        /* STORE LIST */
+        #gis .list-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            display: inline-block;
+        }
+
+        #gis .store-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid transparent;
+            border-radius: 0 12px 12px 0;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        #gis .store-item:hover {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), transparent);
+            border-left-color: var(--accent-gold);
+            padding-left: 20px;
+        }
+
+        #gis .store-info h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        #gis .store-info p {
+            margin: 4px 0 0 0;
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+        }
+
+        #gis .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            transition: 0.3s;
+        }
+
+        #gis .store-item:hover .status-dot {
+            transform: scale(1.5);
+        }
+
+        /* POPUP */
+        .leaflet-popup-content-wrapper {
+            background: rgba(10, 15, 30, 0.95) !important;
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            color: var(--text-main);
+            border-radius: 12px !important;
+            border: 1px solid var(--border-color);
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 0 !important;
+            width: 280px !important;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(10, 15, 30, 0.95) !important;
+        }
+
+        .popup-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        }
+
+        .popup-details {
+            padding: 15px 20px 20px;
+        }
+
+        .popup-header-styled {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .popup-brand {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--accent-gold);
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .popup-title {
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Cinzel', serif;
+            margin: 4px 0;
+            color: #fff;
+        }
+
+        .popup-table td {
+            padding: 6px 0;
+            color: #cbd5e1;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .popup-table td i {
+            width: 24px;
+            color: var(--accent-gold);
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .btn-maps {
+            display: block;
+            margin-top: 15px;
+            padding: 12px;
+            text-align: center;
+            background: linear-gradient(45deg, var(--accent-gold), #f59e0b);
+            color: #000;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+        }
+
+        .btn-maps:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+        }
+
+        /* ANIMATIONS */
+        .pulse {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            height: 14px;
+            width: 14px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin: 11px 0px 0px -12px;
+            transform: rotateX(55deg);
+            z-index: -2;
+        }
+
+        .pulse:after {
+            content: "";
+            border-radius: 50%;
+            height: 40px;
+            width: 40px;
+            position: absolute;
+            margin: -13px 0 0 -13px;
+            animation: pulsate 1.5s ease-out infinite;
+            opacity: 0;
+            box-shadow: 0 0 1px 2px #fff;
+        }
+
+        @keyframes pulsate {
+            0% {
+                transform: scale(0.1);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        #gis #loader-gis {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #020617;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #gis .loader-text {
+            margin-top: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 4px;
+            font-size: 16px;
+            color: var(--accent-gold);
+            animation: pulseText 2s infinite;
+        }
+
+        @keyframes pulseText {
+            0% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.3;
+            }
+        }
+
+        #gis #toggleBtn {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            #gis .sidebar-card {
+                left: -100%;
+                width: 85%;
+            }
+
+            #gis .sidebar-card.active {
+                left: 0;
+            }
+
+            #gis #toggleBtn {
+                display: block;
+            }
+        }
+
+        .map-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #loader-gis .fa-globe-asia {
+            color: #fbbf24;
+        }
+
+        .filter-box-label {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .stat-label i {
+            margin-right: 4px;
+        }
+
+        .stat-card.span-2 {
+            grid-column: span 2;
+        }
+    </style>
+
+    <div class="map-wrapper">
+        <div id="loader-gis">
+            <i class="fas fa-globe-asia fa-3x"></i>
+            <div class="loader-text">INITIALIZING SYSTEM</div>
+        </div>
+
+        <button id="toggleBtn" onclick="toggleGISSidebar()"><i class="fas fa-bars"></i></button>
+
+        <div class="sidebar-card" id="gis-sidebar">
+            <div class="sidebar-header">
+                <h1>GIS DASHBOARD</h1>
+                <div class="subtitle" id="locationCountSubtitle">LOADING DATA...</div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="filter-box">
+                    <label class="filter-box-label">Select Brand</label>
+                    <div class="custom-dropdown" id="brandDropdown">
+                        <div class="dropdown-selected" onclick="toggleGISDropdown()">
+                            <span id="selectedBrandText">All Locations</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </div>
+                        <div class="dropdown-options" id="dropdownOptions">
+                            <!-- JS Injected -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-val" id="totalPCLaptop">0</div>
+                        <div class="stat-label"><i class="fas fa-laptop"></i> PC & LAPTOP</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="totalNetwork">0</div>
+                        <div class="stat-label"><i class="fas fa-network-wired"></i> NET DEVICES</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="totalCCTV">0</div>
+                        <div class="stat-label"><i class="fas fa-video"></i> CCTV CAM</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="totalNVR">0</div>
+                        <div class="stat-label"><i class="fas fa-hdd"></i> NVR SYSTEM</div>
+                    </div>
+                    <div class="stat-card span-2">
+                        <div class="stat-val" id="totalPrinter">0</div>
+                        <div class="stat-label"><i class="fas fa-print"></i> PRINTERS</div>
+                    </div>
+                </div>
+
+                <div class="list-header">Detected Locations</div>
+                <div id="storeListContainer"></div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <script>
+        let gisMap;
+        let gisMarkersLayer;
+        let gisData = [];
+        let gisMarkersMap = {};
+        let gisInitialized = false;
+
+        function initGISMap() {
+            // Wait for dependencies if necessary (Leaflet)
+            if (typeof L === 'undefined') {
+                setTimeout(initGISMap, 500);
+                return;
+            }
+
+            if (gisInitialized) {
+                if (gisMap) setTimeout(() => gisMap.invalidateSize(), 200);
+                return;
+            }
+
+            gisMap = L.map('map', { zoomControl: false, attributionControl: false }).setView([-2.5489, 118.0149], 5);
+            L.control.zoom({ position: 'bottomright' }).addTo(gisMap);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd' }).addTo(gisMap);
+            gisMarkersLayer = L.layerGroup().addTo(gisMap);
+
+            gisInitialized = true;
+
+            // Auto Load on init
+            loadStoreData();
+        }
+
+        function loadStoreData() {
+            const loader = document.getElementById('loader-gis');
+            if (loader) loader.style.display = 'flex';
+
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler(processGISData)
+                    .withFailureHandler(handleGISError)
+                    .getStoreData();
+            } else {
+                console.log("Dev Mode: Apps Script not found. Loading Mock Data.");
+                // Use mock data if strictly needed or just stay blank/error
+                handleGISError({ message: "Environment Apps Script not active." });
+            }
+        }
+
+        function handleGISError(err) {
+            const loader = document.getElementById('loader-gis');
+            if (loader) loader.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;"><i class="fas fa-exclamation-triangle fa-2x"></i><br><br>${err.message}</div>`;
+        }
+
+        function processGISData(data) {
+            const loader = document.getElementById('loader-gis');
+            // Fade out loader
+            if (loader) {
+                loader.style.opacity = '0';
+                loader.style.transition = 'opacity 0.5s';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+
+            if (!data || data.length === 0) {
+                document.getElementById('locationCountSubtitle').innerText = "NO DATA FOUND";
+                return;
+            }
+
+            gisData = data;
+            populateGISFilter();
+            renderGISData(gisData);
+        }
+
+        function renderGISData(data) {
+            gisMarkersLayer.clearLayers();
+            gisMarkersMap = {};
+            const listContainer = document.getElementById('storeListContainer');
+            listContainer.innerHTML = '';
+
+            let stats = { pc_laptop: 0, cctv: 0, nvr: 0, jml_network: 0, printer: 0, count: 0 };
+
+            data.forEach((store, index) => {
+                // Ensure Lat/Lng parsing
+                const lat = parseFloat(store.lat);
+                const lng = parseFloat(store.lng);
+
+                if (isNaN(lat) || isNaN(lng)) return;
+
+                const laptops = parseInt(store.pc_laptop) || 0;
+                const cams = parseInt(store.cctv) || 0;
+                const nvrs = parseInt(store.nvr) || 0;
+                const nets = (parseInt(store.jml_network) || 0);
+                const printers = parseInt(store.printer) || 0;
+                const netName = store.network_desc || (store.jml_network ? 'Network Device' : '-');
+
+                stats.pc_laptop += laptops;
+                stats.cctv += cams;
+                stats.nvr += nvrs;
+                stats.jml_network += nets;
+                stats.printer += printers;
+                stats.count++;
+
+                // MARKER CREATION
+                let color = '#3b82f6';
+                let iconClass = 'fa-building';
+                if (store.brand === 'Bvlgari') { color = '#d4af37'; iconClass = 'fa-gem'; }
+                if (store.brand === 'Omega') { color = '#ef4444'; iconClass = 'fa-stopwatch'; }
+
+                const iconHtml = `
+                    <div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                    <i class="fas ${iconClass}" style="color: #fff; font-size: 12px; transform: rotate(45deg);"></i>
+                    </div>
+                    <div class="pulse"></div>
+                `;
+
+                const customIcon = L.divIcon({ className: 'custom-marker', html: iconHtml, iconSize: [30, 42], iconAnchor: [15, 42], popupAnchor: [0, -40] });
+                const storeImage = store.image || 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=600&auto=format&fit=crop';
+
+                const popupContent = `
+                    <img src="${storeImage}" class="popup-image" alt="${store.location}">
+                    <div class="popup-details">
+                    <div class="popup-header-styled">
+                        <div class="popup-brand">${store.brand}</div>
+                        <div class="popup-title">${store.location}</div>
+                    </div>
+                    <table class="popup-table" style="width:100%">
+                        <tr><td><i class="fas fa-wifi"></i> Connection</td><td>${store.koneksi}</td></tr>
+                        <tr><td><i class="fas fa-desktop"></i> PC & LAPTOP</td><td>${laptops} Units</td></tr>
+                        <tr><td><i class="fas fa-server"></i> NET DEVICES</td><td>${nets} (${netName})</td></tr>
+                        <tr><td><i class="fas fa-video"></i> CCTV CAM</td><td>${cams} Units</td></tr>
+                        <tr><td><i class="fas fa-hdd"></i> NVR SYSTEM</td><td>${nvrs} Units</td></tr>
+                        <tr><td><i class="fas fa-print"></i> PRINTERS</td><td>${printers} Units</td></tr>
+                    </table>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="btn-maps">NAVIGATE TO SITE</a>
+                    </div>
+                `;
+
+                const marker = L.marker([lat, lng], { icon: customIcon }).bindPopup(popupContent);
+                gisMarkersLayer.addLayer(marker);
+                gisMarkersMap[store.location] = marker; // Use Name or Unique ID as key
+
+                // LIST ITEM
+                const listItem = document.createElement('div');
+                listItem.className = 'store-item';
+                listItem.innerHTML = `
+                    <div class="store-info">
+                    <h4 style="color:${color}">${store.location}</h4>
+                    <p>${store.brand} • ${netName}</p>
+                    </div>
+                    <div class="status-dot" title="Online"></div>
+                `;
+                listItem.onclick = () => {
+                    gisMap.flyTo([lat, lng], 17, { duration: 1.5 });
+                    marker.openPopup();
+                    if (window.innerWidth < 768) toggleGISSidebar();
+                };
+                listContainer.appendChild(listItem);
+            });
+
+            updateGISStats(stats);
+        }
+
+        function updateGISStats(stats) {
+            if (document.getElementById('totalPCLaptop')) document.getElementById('totalPCLaptop').innerText = stats.pc_laptop;
+            if (document.getElementById('totalNetwork')) document.getElementById('totalNetwork').innerText = stats.jml_network;
+            if (document.getElementById('totalCCTV')) document.getElementById('totalCCTV').innerText = stats.cctv;
+            if (document.getElementById('totalNVR')) document.getElementById('totalNVR').innerText = stats.nvr;
+            if (document.getElementById('totalPrinter')) document.getElementById('totalPrinter').innerText = stats.printer;
+            if (document.getElementById('locationCountSubtitle')) document.getElementById('locationCountSubtitle').innerText = stats.count + " LOCATIONS ONLINE";
+        }
+
+        function populateGISFilter() {
+            const brands = [...new Set(gisData.map(d => d.brand))];
+            const optionsContainer = document.getElementById('dropdownOptions');
+            optionsContainer.innerHTML = '';
+            addGISDropdownOption('All Locations', 'All');
+            brands.sort().forEach(b => { addGISDropdownOption(b, b); });
+        }
+
+        function addGISDropdownOption(text, value) {
+            const container = document.getElementById('dropdownOptions');
+            const div = document.createElement('div');
+            div.className = 'dropdown-item';
+            let iconHtml = '';
+            if (value === 'Bvlgari') iconHtml = '<i class="fas fa-gem"></i>';
+            else if (value === 'Omega') iconHtml = '<i class="fas fa-stopwatch"></i>';
+            else if (value === 'All') iconHtml = '<i class="fas fa-globe"></i>';
+
+            div.innerHTML = `<span>${text}</span> ${iconHtml}`;
+            div.onclick = () => selectGISBrand(value, text);
+            container.appendChild(div);
+        }
+
+        function toggleGISDropdown() {
+            document.getElementById('brandDropdown').classList.toggle('open');
+        }
+
+        function selectGISBrand(value, text) {
+            document.getElementById('selectedBrandText').innerText = text;
+            toggleGISDropdown();
+
+            const items = document.querySelectorAll('.dropdown-item');
+            items.forEach(item => {
+                if (item.innerText.includes(text)) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+
+            const filtered = (value === 'All') ? gisData : gisData.filter(d => d.brand === value);
+            renderGISData(filtered);
+        }
+
+        function toggleGISSidebar() {
+            document.getElementById('gis-sidebar').classList.toggle('active');
+        }
+
+        // Add event listener to close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            const dropdown = document.getElementById('brandDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+    </script>
+</section>

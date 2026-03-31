@@ -1,0 +1,88 @@
+<script>
+    /**
+     * GIS_JS.html
+     * Centralized Logic for GIS Location Handling
+     */
+
+    // Global variable to store detected locations
+    let detectedLocations = [];
+
+    /**
+     * Initialize GIS Logic
+     * Called from JavaScript.html -> refreshData
+     */
+    function initGISLogic(locationsData) {
+        console.log("Initializing GIS Logic...", locationsData);
+        detectedLocations = locationsData || [];
+        populateLocationDropdown();
+    }
+
+    /**
+     * Populate Location Dropdown in Inventory Form
+     * Merges hardcoded defaults with server data
+     */
+    function populateLocationDropdown() {
+        const selectors = ['form-location', 'form-other-location', 'mob-form-location'];
+
+        // 1. Defined Hardcoded Defaults (The "Correct" List)
+        const defaultLocs = [
+            { name: "Bvlgari Plaza Indonesia", brand: "Bvlgari" },
+            { name: "Bvlgari Plaza Senayan", brand: "Bvlgari" },
+            { name: "Bvlgari Resort Bali", brand: "Bvlgari" },
+            { name: "Omega Plaza Indonesia", brand: "Omega" },
+            { name: "Omega Plaza Senayan", brand: "Omega" },
+            { name: "Omega Mall Kelapa Gading", brand: "Omega" },
+            { name: "Omega Tunjungan Plaza Sby", brand: "Omega" }
+        ];
+
+        // 2. Merge with Server Data (avoid duplicates)
+        // We prioritize the default list structure
+        let combinedLocs = [...defaultLocs];
+        const existingNames = new Set(defaultLocs.map(l => l.name));
+
+        if (detectedLocations && Array.isArray(detectedLocations)) {
+            detectedLocations.forEach(loc => {
+                // Handle various naming conventions from backend
+                const locName = loc.location || loc.nama || loc.name;
+
+                if (locName && !existingNames.has(locName)) {
+                    combinedLocs.push({ name: locName, brand: loc.brand || 'Unknown' });
+                    existingNames.add(locName);
+                }
+            });
+        }
+
+        // 3. Sort Alphabetically
+        combinedLocs.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        // 4. Build HTML
+        let optionsHTML = '<option value="" selected>-- Location --</option>';
+        combinedLocs.forEach(loc => {
+            optionsHTML += `<option value="${loc.name}">${loc.name}</option>`;
+        });
+
+        // 5. Render to all selectors
+        selectors.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = optionsHTML;
+        });
+
+        // Also update the filter dropdown in Map if needed (can be triggered here or in Map.html)
+        if (typeof populateGISFilter === 'function') {
+            // We can let Map.html handle its own data, but this ensures they see the same list if we wanted to sync.
+            // For now, let Map.html use its own 'loadStoreData' flow to keep concerns detected.
+        }
+
+        console.log("Location Dropdown Populated with " + combinedLocs.length + " locations.");
+    }
+
+    /**
+     * Get Location Info
+     * Helper to get brand/details for a detected location
+     */
+    function getLocationInfo(locationName) {
+        if (!locationName) return null;
+        return detectedLocations.find(l => (l.location === locationName || l.nama === locationName || l.name === locationName));
+    }
+
+</script>

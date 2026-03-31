@@ -1,0 +1,66 @@
+<!-- BUDGETING VIEW (NEW) -->
+<section id="budgeting" class="page-section hidden">
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-brand-700">Budgeting Karyawan</h3>
+            <p class="text-sm text-slate-500">Kelola batas anggaran sewa per karyawan</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pb-0">
+            <div class="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Total Budget</p>
+                    <h3 class="text-xl font-bold text-indigo-700" id="budget-total-limit">Rp 0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                </div>
+            </div>
+            <div class="bg-orange-50 rounded-xl p-4 border border-orange-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">Terpakai</p>
+                    <h3 class="text-xl font-bold text-orange-700" id="budget-total-used">Rp 0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+            </div>
+            <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">Sisa Budget</p>
+                    <h3 class="text-xl font-bold text-emerald-700" id="budget-total-remaining">Rp 0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center mt-2">
+            <h3 class="text-lg font-bold text-brand-700">Detail Budget Karyawan</h3>
+            <div class="flex gap-2">
+                <button onclick="exportBudgetReport()"
+                    class="bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded text-xs font-bold hover:bg-slate-50 flex items-center gap-2">
+                    <i class="fa-solid fa-file-export"></i> Export Laporan
+                </button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase">Karyawan</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase">Aset Saat Ini</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase text-right">Biaya Sewa</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase text-right">Budget Limit</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase text-right">Sisa Budget</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase w-40">Status</th>
+                        <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="budget-table-body" class="divide-y divide-slate-50">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

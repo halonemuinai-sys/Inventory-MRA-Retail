@@ -1,0 +1,189 @@
+<!-- MOBILE DEVICE VIEW -->
+<section id="mobiledevice" class="page-section hidden">
+    <div
+        class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div class="relative w-full md:w-2/3"><input type="text" id="mob-search" placeholder="Cari Tablet/Mobile..."
+                class="w-full pl-4 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500"
+                onkeyup="renderMobileDeviceTable()"></div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <select id="mob-filter-type" title="Filter Tipe"
+                class="bg-white border border-slate-200 rounded-lg text-sm px-4 py-2.5 outline-none"
+                onchange="renderMobileDeviceTable()">
+                <option value="">Semua Tipe</option>
+                <option value="Beli">Kantor</option>
+                <option value="Sewa">Sewa</option>
+            </select>
+            <select id="mob-filter-status" title="Filter Status"
+                class="bg-white border border-slate-200 rounded-lg text-sm px-4 py-2.5 outline-none"
+                onchange="renderMobileDeviceTable()">
+                <option value="">Semua Status</option>
+                <option value="Available">Available</option>
+                <option value="Assigned">Assigned</option>
+                <option value="Broken">Broken</option>
+                <option value="Lost">Lost</option>
+                <option value="Return to Vendor">Return to Vendor</option>
+            </select>
+        </div>
+    </div>
+    <div class="flex flex-col lg:flex-row gap-6 items-start h-full">
+        <div class="w-full lg:w-[350px] flex-shrink-0">
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-0 sticky top-0 overflow-hidden">
+                <!-- Tabs -->
+                <div class="flex border-b border-slate-100">
+                    <button onclick="switchMobileTab('details')" id="mob-tab-btn-details"
+                        class="flex-1 py-3 text-sm font-bold text-brand-600 border-b-2 border-brand-600 bg-brand-50/50">Detail
+                        Aset</button>
+                    <button onclick="switchMobileTab('history')" id="mob-tab-btn-history"
+                        class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-slate-600">History</button>
+                </div>
+
+                <div class="p-5">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-brand-700" id="mob-form-title">Tambah Aset Mobile</h3>
+                        <div class="flex gap-2">
+                            <button type="button" id="mob-btn-offboard"
+                                onclick="openOffboardModal(document.getElementById('mob-asset-id').value)"
+                                class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg hidden shadow-sm"><i
+                                    class="fa-solid fa-right-from-bracket mr-1"></i> Offboard</button>
+                            <button type="button" id="mob-btn-cancel-edit" onclick="resetMobileForm()"
+                                class="text-xs text-slate-400 hover:text-slate-600 hidden">Batal</button>
+                        </div>
+                    </div>
+
+                    <!-- Detail Tab -->
+                    <div id="mob-asset-tab-details">
+                        <form id="mob-asset-form" onsubmit="handleMobileSubmit(event)" class="space-y-4">
+                            <input type="hidden" name="id" id="mob-asset-id">
+                            <div><select name="company" id="mob-form-company" title="Unit Bisnis"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none"
+                                    required>
+                                    <option value="" disabled selected>-- Unit Bisnis --</option>
+                                </select></div>
+
+                            <!-- Category Selection -->
+                            <div class="mb-4">
+                                <select name="deviceCategory" id="mob-form-category" title="Kategori Perangkat"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none"
+                                    required>
+                                    <option value="Mobile Device" selected>Mobile Device (Tablet/HP)</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <select name="location" id="mob-form-location" title="Lokasi"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none col-span-2">
+                                    <option value="" selected>-- Location --</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2"><input type="hidden" name="type" id="mob-form-type-input"
+                                    value="Beli"><button type="button" onclick="setMobileAssetType('Beli')" id="mob-btn-type-beli"
+                                    class="w-full py-2 rounded-lg text-sm font-bold border bg-indigo-50 text-indigo-600 border-indigo-200 transition-all">Kantor</button><button
+                                    type="button" onclick="setMobileAssetType('Sewa')" id="mob-btn-type-sewa"
+                                    class="w-full py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all">Sewa</button>
+                            </div>
+                            <input type="text" name="serial" id="mob-form-serial" placeholder="SN / IMEI"
+                                class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none"
+                                required>
+                            <div class="grid grid-cols-2 gap-3"><select name="brand" id="mob-form-brand" title="Merk"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none"
+                                    required>
+                                    <option value="" disabled selected>-- Merk --</option>
+                                </select>
+                                <input type="text" name="processor" id="mob-form-processor" title="Chipset" placeholder="Chipset (Opsional)"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none">
+                            </div>
+                            <input type="text" name="model" id="mob-form-model" placeholder="Model Device (Misal: iPad Pro M2)"
+                                class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none"
+                                required>
+                            <div class="grid grid-cols-2 gap-3"><select name="ram" id="mob-form-ram" title="RAM"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none">
+                                    <option value="" disabled selected>-- RAM --</option>
+                                </select><select name="storage" id="mob-form-storage" title="Storage"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none">
+                                    <option value="" disabled selected>-- Storage --</option>
+                                </select></div>
+                            <select name="os" id="mob-form-os" title="OS"
+                                class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none">
+                                <option value="" disabled selected>-- Operating System --</option>
+                            </select>
+                            
+                            <input type="hidden" name="office" id="mob-form-office" value="-">
+                            <input type="hidden" name="software" id="mob-form-software" value="-">
+
+                            <div id="mob-office-specifics" class="mt-2">
+                                <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">Tanggal
+                                    Pembelian</label>
+                                <input type="date" name="purchaseDate" id="mob-form-purchase-date" title="Tanggal Pembelian"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none text-slate-600">
+                            </div>
+                            <div id="mob-rental-specifics"
+                                class="hidden p-4 bg-orange-50 rounded-lg border border-orange-100 space-y-3 mt-2">
+                                <input type="text" name="rentalRef" id="mob-form-rental-ref" placeholder="Ref Sewa"
+                                    class="w-full p-3 bg-white border border-orange-200 rounded-lg text-sm outline-none"><input
+                                    type="text" name="vendor" id="mob-form-vendor" placeholder="Nama Vendor"
+                                    class="w-full p-3 bg-white border border-orange-200 rounded-lg text-sm outline-none"><input
+                                    type="text" name="rentalCost" id="mob-form-rental-cost" placeholder="0"
+                                    class="w-full p-3 bg-white border border-orange-200 rounded-lg text-sm outline-none"
+                                    onkeyup="formatCurrency(this)">
+                                <div class="grid grid-cols-2 gap-3"><input type="date" name="rentalStart" title="Tanggal Mulai Sewa"
+                                        id="mob-form-rental-start"
+                                        class="w-full p-3 bg-white border border-orange-200 rounded-lg text-xs text-slate-500 outline-none"><input
+                                        type="date" name="rentalEnd" id="mob-form-rental-end" title="Tanggal Selesai Sewa"
+                                        class="w-full p-3 bg-white border border-orange-200 rounded-lg text-xs text-slate-500 outline-none">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">Status Aset</label>
+                                <select name="status" id="mob-form-status" title="Status"
+                                    class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none text-slate-700 font-medium">
+                                    <option value="Available">Available (Tersedia)</option>
+                                    <option value="Assigned">Assigned (Digunakan)</option>
+                                    <option value="Broken">Broken (Rusak)</option>
+                                    <option value="Lost">Lost (Hilang)</option>
+                                    <option value="Return to Vendor">Return to Vendor (Dikembalikan)</option>
+                                </select>
+                            </div>
+                            <button type="submit" id="mob-btn-submit-asset"
+                                class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-lg shadow-md shadow-brand-600/20 transition-all mt-4">Simpan</button>
+                        </form>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div id="mob-asset-tab-history" class="hidden">
+                        <div id="mob-asset-history-list" class="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                            <!-- History items injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden min-h-[600px]">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left">
+                        <thead class="bg-slate-50/50 border-b border-slate-100">
+                            <tr>
+                                <th class="py-4 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    DEVICE</th>
+                                <th class="py-4 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    SPESIFIKASI</th>
+                                <th class="py-4 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    STATUS</th>
+                                <th class="py-4 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                    TENANT</th>
+                                <th
+                                    class="py-4 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                                    AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mobile-table-body" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                    <div id="mob-empty-msg" class="hidden p-12 text-center text-slate-400"><i
+                            class="fa-solid fa-mobile-screen-button text-3xl mb-3 opacity-30"></i>
+                        <p>Data Mobile Device (Tablet/HP) tidak ditemukan.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

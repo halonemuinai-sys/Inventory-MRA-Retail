@@ -1,0 +1,273 @@
+<script>
+    // --- TICKET SUPPORT LOGIC ---
+
+    function populateTicketReporters() {
+        const sel = document.getElementById('ticket-reporter');
+        if (!sel) return;
+
+        // Save current selection if re-populating
+        const currentVal = sel.value;
+
+        sel.innerHTML = '<option value="" disabled selected>-- Pilih Pelapor --</option>';
+        if (typeof employeeData !== 'undefined') {
+            employeeData.sort((a, b) => a.name.localeCompare(b.name)).forEach(emp => {
+                sel.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.department})</option>`;
+            });
+        }
+
+        if (currentVal) sel.value = currentVal;
+    }
+
+    function populateTicketAssets(empId) {
+        const sel = document.getElementById('ticket-asset');
+        const assetMsg = document.getElementById('ticket-asset-msg'); // Add a message element if needed
+        if (!sel) return;
+
+        sel.innerHTML = '<option value="" selected>-- Tidak Ada / Umum --</option>';
+
+        if (!empId) return;
+
+        // Ensure data is available
+        if (typeof employeeData === 'undefined' || typeof inventoryData === 'undefined') {
+            console.error("Data not loaded yet");
+            return;
+        }
+
+        // 1. Find assigned asset
+        const emp = employeeData.find(e => e.id == empId || e.id === empId);
+        if (emp && emp.assignedAssetId) {
+            const asset = inventoryData.find(i => i.id == emp.assignedAssetId || i.id === emp.assignedAssetId);
+            if (asset) {
+                const opt = document.createElement('option');
+                opt.value = asset.id;
+                opt.text = `⭐ ${asset.brand} ${asset.model} (${asset.serial})`;
+                opt.selected = true;
+                sel.appendChild(opt);
+
+                const divider = document.createElement('option');
+                divider.disabled = true;
+                divider.text = "──────────────";
+                sel.appendChild(divider);
+            }
+        }
+
+        // 2. Add all other assets
+        const rentalAssets = inventoryData.filter(i => i.type === 'Sewa' && i.id != (emp?.assignedAssetId)).sort((a, b) => a.brand.localeCompare(b.brand));
+        const officeAssets = inventoryData.filter(i => i.type !== 'Sewa' && i.id != (emp?.assignedAssetId)).sort((a, b) => a.brand.localeCompare(b.brand));
+
+        if (rentalAssets.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = "--- Aset Sewa ---";
+            rentalAssets.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.text = `${a.brand} ${a.model} (${a.serial})`;
+                group.appendChild(opt);
+            });
+            sel.appendChild(group);
+        }
+
+        if (officeAssets.length > 0) {
+            const group = document.createElement('optgroup');
+            group.label = "--- Aset Kantor ---";
+            officeAssets.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.text = `${a.brand} ${a.model} (${a.serial})`;
+                group.appendChild(opt);
+            });
+            sel.appendChild(group);
+        }
+    }
+
+    function handleTicketSubmit(e) {
+        e.preventDefault();
+
+        // Basic validation
+        const reporterId = document.getElementById('ticket-reporter').value;
+        const category = document.getElementById('ticket-category').value;
+        const subject = document.getElementById('ticket-subject').value;
+        const desc = document.getElementById('ticket-desc').value;
+
+        if (!reporterId || !category || !subject || !desc) {
+            alert("Mohon lengkapi: Pelapor, Kategori, Judul, dan Deskripsi.");
+            return;
+        }
+
+        showLoading(true);
+
+        const date = document.getElementById('ticket-date').value || new Date().toISOString().split('T')[0];
+        const assetId = document.getElementById('ticket-asset').value;
+        const priority = document.getElementById('ticket-priority').value;
+
+        // Safe data retrieval
+        const reporter = employeeData.find(e => e.id == reporterId);
+        const asset = assetId ? inventoryData.find(i => i.id == assetId) : null;
+
+        const ticketData = {
+            ticketDate: date,
+            reporterId: reporterId,
+            reporterName: reporter ? reporter.name : 'Unknown',
+            issueCategory: category,
+            priority: priority,
+            subject: subject,
+            description: desc,
+            assetId: assetId || '',
+            assetName: asset ? `${asset.brand} ${asset.model} (${asset.serial})` : '',
+            status: 'Open',
+            resolution: ''
+        };
+
+        google.script.run.withSuccessHandler((res) => {
+            showLoading(false);
+            if (res.success) {
+                alert("✅ Tiket Berhasil Dibuat!");
+                // Reset form
+                document.getElementById('ticket-subject').value = '';
+                document.getElementById('ticket-desc').value = '';
+                document.getElementById('ticket-category').value = '';
+                document.getElementById('ticket-asset').value = '';
+                document.getElementById('ticket-reporter').value = '';
+
+                // Refresh data to update lists if we add a ticket list later
+                // refreshData(); 
+            } else {
+                alert("❌ Gagal membuat tiket: " + res.message);
+            }
+        }).apiAddTicket(ticketData);
+    }
+
+    // --- Ticket List & Actions ---
+
+    function loadTickets() {
+        const listContainer = document.getElementById('ticket-list-container');
+        if (!listContainer) return; // Not on ticket page? Still need badge.
+
+        // Show loading state in list if visible
+        if (listContainer.offsetParent !== null) {
+            listContainer.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i> Memuat...</div>';
+        }
+
+        google.script.run.withSuccessHandler((tickets) => {
+            renderTicketList(tickets);
+            updateTicketBadge(tickets);
+        }).apiGetTickets();
+    }
+
+    function renderTicketList(tickets) {
+        const listContainer = document.getElementById('ticket-list-container');
+        const countSpan = document.getElementById('ticket-list-count');
+
+        if (!listContainer) return;
+
+        const openTickets = tickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed');
+
+        if (countSpan) {
+            countSpan.innerText = openTickets.length;
+            if (openTickets.length > 0) countSpan.classList.remove('hidden');
+            else countSpan.classList.add('hidden');
+        }
+
+        if (tickets.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center text-slate-400 py-10">
+                    <i class="fa-regular fa-folder-open text-3xl mb-2 opacity-30"></i>
+                    <p class="text-xs">Belum ada tiket.</p>
+                </div>`;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+
+        // Sort: Open first, then by Priority (Critical first), then Date Desc
+        tickets.sort((a, b) => {
+            const statusA = (a.status === 'Resolved' || a.status === 'Closed') ? 1 : 0;
+            const statusB = (b.status === 'Resolved' || b.status === 'Closed') ? 1 : 0;
+            if (statusA !== statusB) return statusA - statusB; // Open first
+
+            const priorityMap = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+            const pA = priorityMap[a.priority] || 2;
+            const pB = priorityMap[b.priority] || 2;
+            if (pA !== pB) return pA - pB;
+
+            return 0; // Keep date sort from backend
+        });
+
+        tickets.forEach(t => {
+            const isResolved = t.status === 'Resolved' || t.status === 'Closed';
+            const statusColor = isResolved ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-orange-100 text-orange-600 border-orange-200';
+            const statusIcon = isResolved ? 'fa-check' : 'fa-hourglass-half';
+            const opacity = isResolved ? 'opacity-60' : '';
+
+            // Priority Color
+            let priorityColor = 'text-slate-500';
+            if (t.priority === 'High') priorityColor = 'text-orange-600 font-bold';
+            if (t.priority === 'Critical') priorityColor = 'text-red-600 font-bold';
+
+            const assetInfo = t.assetName ? `<div class="text-[10px] text-slate-500 mt-1"><i class="fa-solid fa-laptop text-slate-400 mr-1"></i> ${t.assetName}</div>` : '';
+
+            listContainer.innerHTML += `
+                <div class="bg-white border border-slate-100 rounded-lg p-3 hover:shadow-md transition-shadow relative group ${opacity}">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-mono text-slate-400">#${t.id ? t.id.substring(0, 8) : 'ID'} • ${t.ticketDate}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusColor} font-bold flex items-center gap-1">
+                            <i class="fa-solid ${statusIcon} text-[10px]"></i> ${t.status}
+                        </span>
+                    </div>
+                    <h4 class="font-bold text-slate-700 text-sm mb-1">${t.subject}</h4>
+                    <!-- <p class="text-xs text-slate-500 line-clamp-2">${t.description}</p> -->
+                    
+                    ${assetInfo}
+
+                    <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-50">
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <i class="fa-regular fa-user text-slate-400"></i> ${t.reporterName}
+                            <span class="mx-1">•</span>
+                            <span class="${priorityColor}">${t.priority}</span>
+                        </div>
+                        
+                        ${!isResolved ? `
+                        <button onclick="resolveTicket('${t.id}')" class="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-2 py-1 rounded font-bold transition-colors border border-emerald-100">
+                             <i class="fa-solid fa-check mr-1"></i> Resolve
+                        </button>` : ''}
+                    </div>
+                </div>`;
+        });
+    }
+
+    function updateTicketBadge(tickets) {
+        const badge = document.getElementById('sidebar-ticket-badge');
+        if (!badge) return;
+
+        const openCount = tickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
+
+        if (openCount > 0) {
+            badge.innerText = openCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    function resolveTicket(id) {
+        if (!confirm("Tandai tiket ini sebagai Selesai (Resolved)?")) return;
+
+        showLoading(true);
+        // We need an API for this. Since we don't have updateTicket status API specifically, 
+        // we can use apiUpdateRow if we knew the structure, or create apiResolveTicket.
+        // For now, let's create apiResolveTicket in API.gs, then call it.
+        // Wait, I haven't created apiResolveTicket yet.
+        // I will use a generic update if I can, but IDK the full object.
+        // Better to add apiResolveTicket to API.gs next.
+
+        google.script.run.withSuccessHandler((res) => {
+            showLoading(false);
+            if (res.success) {
+                alert("Tiket resolved!");
+                loadTickets(); // Refresh list
+            } else {
+                alert("Gagal: " + res.message);
+            }
+        }).apiResolveTicket(id);
+    }
+</script>

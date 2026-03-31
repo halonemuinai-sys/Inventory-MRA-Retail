@@ -1,0 +1,134 @@
+<aside class="w-64 bg-white flex flex-col shadow-xl z-30 border-r border-slate-200">
+    <div class="h-16 flex items-center px-6 border-b border-slate-100">
+        <div class="flex items-center gap-2 text-brand-700">
+            <i class="fa-solid fa-shapes text-xl"></i>
+            <span class="font-bold text-sm tracking-tight leading-tight">Asset & Lease<br>Management MRA Retail</span>
+        </div>
+    </div>
+
+    <!-- User & Company -->
+    <div class="p-4 bg-slate-50 border-b border-slate-200">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs"
+                id="sidebar-user-initial">
+                A</div>
+            <div class="flex-1">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-sm font-bold text-slate-700" id="sidebar-user-name">Administrator</div>
+                        <div class="text-[10px] text-slate-400 font-semibold tracking-wider" id="sidebar-user-role">
+                            ADMIN</div>
+                    </div>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 transition-colors"
+                        title="Keluar">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                <i class="fa-solid fa-building text-slate-400 text-xs"></i>
+            </div>
+            <select id="company-selector" title="Unit Bisnis" onchange="handleCompanySwitch(this.value)"
+                class="w-full pl-7 pr-8 py-2 bg-white border border-brand-500 rounded text-xs font-semibold text-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm appearance-none cursor-pointer">
+                <option value="Global">Global (Semua)</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none"><i
+                    class="fa-solid fa-chevron-down text-brand-700 text-[10px]"></i></div>
+        </div>
+        <div id="company-subtitle" class="text-[10px] text-slate-400 mt-1 pl-1 truncate">All Business Units</div>
+    </div>
+
+    <!-- NAV MENU -->
+    <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+        <div class="px-6 pb-2 pt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overview</div>
+        <button onclick="showSection('dashboard')" id="nav-dashboard"
+            class="nav-item active w-full flex items-center justify-between px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-house w-4"></i> <span>Dashboard</span></div>
+            <span id="sidebar-warning-badge"
+                class="hidden bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+        </button>
+
+        <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Operasional</div>
+        <button onclick="showSection('inventory'); renderInventoryTable()" id="nav-inventory"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-laptop w-4"></i><span>Inventaris Aset</span>
+            </div>
+        </button>
+        <button onclick="showSection('mobiledevice'); renderMobileDeviceTable()" id="nav-mobiledevice"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-mobile-screen-button w-4"></i><span>Mobile Devices</span>
+            </div>
+        </button>
+        <button onclick="showSection('other-device'); renderOtherDeviceTable()" id="nav-other-device"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-server w-4"></i><span>Input Other Device</span>
+            </div>
+        </button>
+        <button onclick="showSection('employees')" id="nav-employees"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-users w-4"></i><span>Data Karyawan</span></div>
+        </button>
+        <button onclick="showSection('gis'); if(typeof initGISMap === 'function') setTimeout(initGISMap, 100);"
+            id="nav-gis"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all hover:bg-slate-50 text-slate-500 hover:text-brand-600">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-map-location-dot w-4"></i><span>GIS
+                    Dashboard</span></div>
+        </button>
+
+        <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Helpdesk</div>
+        <button onclick="showSection('ticket-support')" id="nav-ticket-support"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-regular fa-comment-dots w-4"></i><span>Tiket
+                    Support</span></div>
+            <span id="sidebar-ticket-badge"
+                class="hidden bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="showSection('ticket-summary')" id="nav-ticket-summary"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-chart-simple w-4"></i><span>Ticket Summary</span>
+            </div>
+        </button>
+
+        <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Laporan</div>
+        <button onclick="showSection('budgeting')" id="nav-budgeting"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i
+                    class="fa-solid fa-file-invoice-dollar w-4"></i><span>Budgeting</span></div>
+        </button>
+        <button onclick="showSection('analysis-export')" id="nav-analysis-export"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-file-export w-4"></i><span>Analisa &
+                    Export</span></div>
+        </button>
+        <button onclick="showSection('cost-analysis')" id="nav-cost"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-chart-pie w-4"></i><span>Analisa Biaya</span>
+            </div>
+        </button>
+        <button onclick="showSection('rental-report')" id="nav-rental-report"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-receipt w-4"></i><span>Laporan Sewa</span>
+            </div>
+        </button>
+        <button onclick="showSection('rental-spec'); if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();" id="nav-rental-spec"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-laptop-file w-4"></i><span>Spesifikasi Sewa</span>
+            </div>
+        </button>
+
+        <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Admin</div>
+        <button onclick="showSection('configuration')" id="nav-config"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-gear w-4"></i><span>Konfigurasi</span></div>
+        </button>
+    </nav>
+
+    <div class="p-4 border-t border-slate-200 text-center">
+        <button onclick="refreshData()"
+            class="text-xs text-slate-500 hover:text-brand-600 flex items-center justify-center gap-2 w-full"><i
+                class="fa-solid fa-rotate"></i> Sync Data</button>
+    </div>
+</aside>
