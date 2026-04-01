@@ -1,4 +1,62 @@
 <!-- BAST OVERLAY -->
+<style>
+    @media print {
+        /* Hide everything by default */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Ensure only the paper is visible */
+        #bast-paper,
+        #bast-paper * {
+            visibility: visible;
+        }
+
+        /* Essential print resets for the paper itself */
+        #bast-paper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+        }
+
+        /* Force A4 layout without default browser margins */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        /* Force CSS properties to ensure background colors print on DocuCentre / Chrome */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Remove fixed layout bugs when printing overlays */
+        #bast-print-area {
+            position: absolute !important;
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        #bast-wrapper, 
+        .overflow-y-auto {
+            overflow: visible !important;
+            height: auto !important;
+            background: white !important;
+        }
+
+        /* Hide print/close buttons from printing explicitly */
+        #bast-header-actions {
+            display: none !important;
+        }
+    }
+</style>
 <div id="bast-print-area"
     class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-hidden">
     <!-- WRAPPER -->
