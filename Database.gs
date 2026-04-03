@@ -79,12 +79,19 @@ function getData(sheetName) {
   return data.map(row => {
     let tempObject = {};
     headers.forEach((key, index) => {
-      // Date formatting for JSON safety
-      if(row[index] instanceof Date) {
-         try { tempObject[key] = row[index].toISOString().split('T')[0]; } 
-         catch(e) { tempObject[key] = row[index]; }
+      const val = row[index];
+      if(val instanceof Date) {
+         try { 
+           // If header implies a "Time" field, format as HH:mm
+           if (key.toLowerCase().includes('time')) {
+             tempObject[key] = Utilities.formatDate(val, Session.getScriptTimeZone(), "HH:mm");
+           } else {
+             // Otherwise assume it's a Date field, format as yyyy-MM-dd
+             tempObject[key] = Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
+           }
+         } catch(e) { tempObject[key] = val; }
       } else {
-         tempObject[key] = row[index];
+         tempObject[key] = val;
       }
     });
     return tempObject;

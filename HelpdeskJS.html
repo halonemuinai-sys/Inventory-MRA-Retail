@@ -12,11 +12,43 @@
         const now = new Date();
         const dateEl = document.getElementById('hd-date');
         const timeEl = document.getElementById('hd-time');
-        if (dateEl) dateEl.value = now.toISOString().split('T')[0];
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        if (dateEl) dateEl.value = `${yyyy}-${mm}-${dd}`;
         if (timeEl) {
             const hh = String(now.getHours()).padStart(2, '0');
             const mm = String(now.getMinutes()).padStart(2, '0');
             timeEl.value = hh + ':' + mm;
+        }
+
+        // Add auto-timestamp on status change in detail modal
+        const statusSelect = document.getElementById('hd-edit-status');
+        if (statusSelect && !statusSelect.hasAttribute('data-listener')) {
+            statusSelect.setAttribute('data-listener', 'true');
+            statusSelect.addEventListener('change', function() {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                const hh = String(now.getHours()).padStart(2, '0');
+                const min = String(now.getMinutes()).padStart(2, '0');
+                
+                const today = `${yyyy}-${mm}-${dd}`;
+                const time = `${hh}:${min}`;
+                
+                if (this.value === 'In Progress') {
+                    const dateEl = document.getElementById('hd-edit-response-date');
+                    const timeEl = document.getElementById('hd-edit-response-time');
+                    if (dateEl && !dateEl.value) dateEl.value = today;
+                    if (timeEl && !timeEl.value) timeEl.value = time;
+                } else if (this.value === 'Resolved' || this.value === 'Closed') {
+                    const dateEl = document.getElementById('hd-edit-resolved-date');
+                    const timeEl = document.getElementById('hd-edit-resolved-time');
+                    if (dateEl && !dateEl.value) dateEl.value = today;
+                    if (timeEl && !timeEl.value) timeEl.value = time;
+                }
+            });
         }
     }
 
@@ -118,6 +150,14 @@
 
                 // Reset form
                 document.getElementById('helpdesk-form').reset();
+                document.getElementById('hd-reporter').value = '';
+                document.getElementById('hd-source').value = '';
+                document.getElementById('hd-location').value = '';
+                document.getElementById('hd-category').value = '';
+                document.getElementById('hd-issue-title').value = '';
+                document.getElementById('hd-desc').value = '';
+                document.getElementById('hd-priority').value = 'Medium';
+                document.getElementById('hd-impact').value = '';
                 initHelpdeskForm(); // Re-fill date/time
 
                 // Auto-hide success after 5s

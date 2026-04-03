@@ -339,18 +339,20 @@ function apiGetHelpdeskTickets() {
 function apiUpdateHelpdeskTicket(data) {
   if (!data.id) return { success: false, message: "Ticket ID required" };
   
-  // If status changed to In Progress and no responseDate, auto-set
-  if (data.status === 'In Progress' && !data.responseDate) {
-    const now = new Date();
-    data.responseDate = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    data.responseTime = Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const timeStr = Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+
+  // If status is "In Progress" and response info is missing, fill it
+  if (data.status === 'In Progress' && (!data.responseDate || data.responseDate === '')) {
+    data.responseDate = dateStr;
+    data.responseTime = timeStr;
   }
   
-  // If status changed to Resolved/Closed and no resolvedDate, auto-set
-  if ((data.status === 'Resolved' || data.status === 'Closed') && !data.resolvedDate) {
-    const now = new Date();
-    data.resolvedDate = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    data.resolvedTime = Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+  // If status is "Resolved" or "Closed" and resolved info is missing, fill it
+  if ((data.status === 'Resolved' || data.status === 'Closed') && (!data.resolvedDate || data.resolvedDate === '')) {
+    data.resolvedDate = dateStr;
+    data.resolvedTime = timeStr;
   }
   
   return updateRow('HelpdeskTickets', data.id, data);
