@@ -614,4 +614,126 @@
                 </tr>`;
         });
     }
+    
+    // --- HELPDESK MONTHLY REPORT LOGIC ---
+    function renderHelpdeskReport() {
+        const month = parseInt(document.getElementById('hd-report-month').value);
+        const year = parseInt(document.getElementById('hd-report-year').value);
+        const tbody = document.getElementById('hd-report-body');
+        const emptyMsg = document.getElementById('hd-report-empty');
+        
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        let total = 0, resolved = 0, breached = 0, slaTotal = 0, slaAchieved = 0;
+        
+        // Filter tickets by month and year of ticketDate
+        const filtered = helpdeskTickets.filter(t => {
+            if (!t.ticketDate) return false;
+            const d = new Date(t.ticketDate);
+            return d.getMonth() === month && d.getFullYear() === year;
+        });
+        
+        if (filtered.length === 0) {
+            emptyMsg.classList.remove('hidden');
+            updateReportWidgets(0, 0, 0, 0);
+            return;
+        }
+        
+        emptyMsg.classList.add('hidden');
+        
+        filtered.forEach(t => {
+            total++;
+            if (t.status === 'Resolved' || t.status === 'Closed') resolved++;
+            if (t.slaStatus === 'Breached') breached++;
+            if (t.slaStatus === 'Achieved' || t.slaStatus === 'Breached') {
+                slaTotal++;
+                if (t.slaStatus === 'Achieved') slaAchieved++;
+            }
+            
+            // Priority & Status classes
+            const priColor = t.priority === 'High' ? 'text-red-600' : (t.priority === 'Medium' ? 'text-yellow-700' : 'text-slate-500');
+            const statusColor = t.status === 'Resolved' || t.status === 'Closed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700';
+            const slaColor = t.slaStatus === 'Achieved' ? 'bg-emerald-50 text-emerald-600' : (t.slaStatus === 'Breached' ? 'bg-red-50 text-red-600' : 'text-slate-300');
+            
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 growable">
+                    <td class="px-6 py-4 text-xs font-mono font-bold text-brand-600">${t.id}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-xs font-bold text-slate-800">${t.reporterName || '-'}</div>
+                        <div class="text-[10px] text-slate-400 font-medium">${t.location || ''}</div>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-600">${t.ticketDate}</td>
+                    <td class="px-6 py-4 text-xs font-medium text-slate-700">${t.category || '-'}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-xs font-bold text-slate-700 truncate max-w-[200px]" title="${t.issueTitle}">${t.issueTitle || '-'}</div>
+                        <div class="text-[10px] text-slate-500 truncate max-w-[200px]">${t.description || ''}</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full ${statusColor} text-[10px] font-bold border border-current opacity-80">${t.status}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full ${slaColor} text-[10px] font-bold">${t.slaStatus || '-'}</span>
+                    </td>
+                </tr>`;
+        });
+        
+        const slaPct = slaTotal > 0 ? Math.round((slaAchieved / slaTotal) * 100) : 0;
+        updateReportWidgets(total, resolved, slaPct, breached);
+    }
+    
+    function updateReportWidgets(total, resolved, slaPct, breached) {
+        document.getElementById('hd-rep-total').innerText = total;
+        document.getElementById('hd-rep-resolved').innerText = resolved;
+        document.getElementById('hd-rep-sla-pct').innerText = slaPct + '%';
+        document.getElementById('hd-rep-breached').innerText = breached;
+    }
+    
+    function exportHelpdeskReport() {
+        const month = parseInt(document.getElementById('hd-report-month').value);
+        const year = parseInt(document.getElementById('hd-report-year').value);
+        const monthName = document.getElementById('hd-report-month').options[month].text;
+        
+        const filtered = helpdeskTickets.filter(t => {
+            if (!t.ticketDate) return false;
+            const d = new Date(t.ticketDate);
+            return d.getMonth() === month && d.getFullYear() === year;
+        });
+        
+        if (filtered.length === 0) {
+            alert("Tidak ada data untuk diexport pada periode ini.");
+            return;
+        }
+        
+        const headers = ['Ticket ID', 'Reporter', 'Location', 'Date', 'Time', 'Category', 'Issue Title', 'Description', 'Priority', 'Impact', 'Status', 'SLA Status', 'Response Date', 'Resolution Date'];
+        const rows = [headers];
+        
+        filtered.forEach(t => {
+            rows.push([
+                t.id,
+                `"${t.reporterName || ''}"`,
+                `"${t.location || ''}"`,
+                t.ticketDate,
+                t.ticketTime,
+                t.category,
+                `"${(t.issueTitle || '').replace(/"/g, '""')}"`,
+                `"${(t.description || '').replace(/"/g, '""')}"`,
+                t.priority,
+                t.impactLevel,
+                t.status,
+                t.slaStatus,
+                t.responseDate || '',
+                t.resolvedDate || ''
+            ]);
+        });
+        
+        const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Helpdesk_Report_${monthName}_${year}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>

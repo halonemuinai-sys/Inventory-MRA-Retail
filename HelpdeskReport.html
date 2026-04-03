@@ -1,0 +1,79 @@
+<!-- HELPDESK REPORT VIEW -->
+<section id="helpdesk-report" class="page-section hidden">
+    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div class="flex items-center gap-2">
+            <h3 class="font-bold text-slate-700">Laporan Bulanan IT Helpdesk</h3>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <select id="hd-report-month" title="Bulan"
+                class="bg-white border border-slate-200 rounded-lg text-sm px-4 py-2.5 outline-none"
+                onchange="renderHelpdeskReport()">
+                <option value="0">Januari</option>
+                <option value="1">Februari</option>
+                <option value="2">Maret</option>
+                <option value="3">April</option>
+                <option value="4">Mei</option>
+                <option value="5">Juni</option>
+                <option value="6">Juli</option>
+                <option value="7">Agustus</option>
+                <option value="8">September</option>
+                <option value="9">Oktober</option>
+                <option value="10">November</option>
+                <option value="11">Desember</option>
+            </select>
+            <select id="hd-report-year" title="Tahun"
+                class="bg-white border border-slate-200 rounded-lg text-sm px-4 py-2.5 outline-none"
+                onchange="renderHelpdeskReport()">
+                <!-- Populated by JS -->
+            </select>
+            <button onclick="exportHelpdeskReport()"
+                class="bg-emerald-50 text-emerald-600 border border-emerald-100 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-colors">
+                <i class="fa-solid fa-file-excel mr-2"></i> Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Widgets -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Tiket</div>
+            <div class="text-2xl font-bold text-slate-800" id="hd-rep-total">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Selesai (Resolved)</div>
+            <div class="text-2xl font-bold text-emerald-600" id="hd-rep-resolved">0</div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Penyelesaian SLA</div>
+            <div class="text-2xl font-bold text-blue-600" id="hd-rep-sla-pct">0%</div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">SLA Breached</div>
+            <div class="text-2xl font-bold text-red-600" id="hd-rep-breached">0</div>
+        </div>
+    </div>
+
+    <!-- Report Table -->
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden min-h-[500px]">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left">
+                <thead class="bg-slate-50/50 border-b border-slate-100">
+                    <tr>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Ticket ID</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reporter</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-28">Tanggal</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Kategori</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Masalah</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24 text-center">Status</th>
+                        <th class="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24 text-center">SLA</th>
+                    </tr>
+                </thead>
+                <tbody id="hd-report-body" class="divide-y divide-slate-50"></tbody>
+            </table>
+            <div id="hd-report-empty" class="hidden p-20 text-center text-slate-400">
+                <i class="fa-solid fa-folder-open text-4xl mb-4 opacity-20"></i>
+                <p class="text-sm">Tidak ada catatan tiket untuk periode ini.</p>
+            </div>
+        </div>
+    </div>
+</section>
