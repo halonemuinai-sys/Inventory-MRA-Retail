@@ -92,17 +92,34 @@
             </div>
         </button>
 
+        <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">IT Helpdesk</div>
+        <button onclick="showSection('helpdesk-input'); initHelpdeskForm();" id="nav-helpdesk-input"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-headset w-4"></i><span>Input Tiket</span></div>
+        </button>
+        <button onclick="showSection('helpdesk-list'); loadHelpdeskTickets();" id="nav-helpdesk-list"
+            class="nav-item w-full flex items-center justify-between px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-list-check w-4"></i><span>Daftar Tiket</span></div>
+            <span id="sidebar-hd-badge"
+                class="hidden bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="showSection('helpdesk-dashboard'); renderHelpdeskDashboard();" id="nav-helpdesk-dashboard"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i class="fa-solid fa-chart-pie w-4"></i><span>Dashboard Helpdesk</span></div>
+        </button>
+
         <div class="px-6 pb-2 pt-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Laporan</div>
         <button onclick="showSection('budgeting')" id="nav-budgeting"
             class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
             <div class="flex items-center gap-3"><i
                     class="fa-solid fa-file-invoice-dollar w-4"></i><span>Budgeting</span></div>
         </button>
-        <button onclick="showSection('analysis-export')" id="nav-analysis-export"
-            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
-            <div class="flex items-center gap-3"><i class="fa-solid fa-file-export w-4"></i><span>Analisa &
-                    Export</span></div>
+        <button onclick="showSection('company-budget-view'); renderCompanyBudgetTable();" id="nav-company-budget-view"
+            class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all text-slate-500 hover:text-brand-600 hover:bg-slate-50">
+            <div class="flex items-center gap-3"><i
+                    class="fa-solid fa-building-columns w-4"></i><span>Budget Perusahaan</span></div>
         </button>
+
         <button onclick="showSection('cost-analysis')" id="nav-cost"
             class="nav-item w-full flex items-center px-6 py-2.5 text-sm transition-all">
             <div class="flex items-center gap-3"><i class="fa-solid fa-chart-pie w-4"></i><span>Analisa Biaya</span>

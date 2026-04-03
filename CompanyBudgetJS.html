@@ -1,0 +1,180 @@
+<script>
+    function changeCBYear(year) {
+        selectedGlobalYear = parseInt(year);
+        // Sync other year dropdowns
+        const d1 = document.getElementById('dash-year-select');
+        const d2 = document.getElementById('cost-year-select');
+        if (d1) d1.value = selectedGlobalYear;
+        if (d2) d2.value = selectedGlobalYear;
+        
+        // Refresh full data to apply year filter backend
+        if (typeof refreshData === 'function') refreshData();
+    }
+
+    function openCBDetailModal(companyName) {
+        document.getElementById('cb-modal-company-title').innerText = companyName;
+        const tbody = document.getElementById('cb-modal-table-body');
+        tbody.innerHTML = '';
+        
+        const emps = employeeData.filter(e => e.company === companyName);
+        
+        if (emps.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-400">Tidak ada kandidat di perusahaan ini.</td></tr>`;
+        } else {
+            emps.forEach(emp => {
+                const budget = parseInt(emp.budget) || 0;
+                const budgetFormatted = budget > 0 ? 'Rp ' + budget.toLocaleString('id-ID') : 'Rp 0';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 align-top">
+                            <div class="text-sm font-bold text-slate-700">${emp.name}</div>
+                            <div class="text-xs text-slate-500">${emp.role || '-'}</div>
+                        </td>
+                        <td class="px-4 py-3 align-top text-xs text-slate-600">${emp.department || '-'}</td>
+                        <td class="px-4 py-3 align-top text-right font-mono text-sm text-slate-700 font-bold">${budgetFormatted}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        document.getElementById('cb-detail-modal').classList.remove('hidden');
+    }
+
+    function closeCBDetailModal() {
+        document.getElementById('cb-detail-modal').classList.add('hidden');
+    }
+    function renderCompanyBudgetTable() {
+        const tbody = document.getElementById('company-budget-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        // Aggregate data per company
+        const companyStats = {};
+        
+        // Ensure all companies from master data are initialized
+        masterData.filter(m => m.category === 'Company').forEach(m => {
+            if (!companyStats[m.value]) {
+                companyStats[m.value] = { name: m.value, candidates: 0, budgetLimit: 0 };
+            }
+        });
+
+        // Initialize based on employees
+        employeeData.forEach(emp => {
+            if (emp.company) {
+                if (!companyStats[emp.company]) {
+                    companyStats[emp.company] = { name: emp.company, candidates: 0, budgetLimit: 0 };
+                }
+                companyStats[emp.company].candidates += 1;
+                companyStats[emp.company].budgetLimit += (parseInt(emp.budget) || 0);
+            }
+        });
+
+        // Use activeCompany filter if applied
+        let filteredStats = Object.values(companyStats);
+        if (activeCompany !== 'Global') {
+            filteredStats = filteredStats.filter(c => c.name === activeCompany);
+        }
+
+        // Sort alphabetically or by budget? Let's sort by budget descending, then name
+        filteredStats.sort((a, b) => b.budgetLimit - a.budgetLimit || a.name.localeCompare(b.name));
+
+        let totalGlobalBudget = 0;
+        let totalCandidates = 0;
+        let totalCompanies = 0;
+
+        if (filteredStats.length === 0 || (filteredStats.length === 1 && filteredStats[0].candidates === 0 && filteredStats[0].budgetLimit === 0 && activeCompany !== 'Global')) {
+            document.getElementById('cb-empty-msg').classList.remove('hidden');
+        } else {
+            document.getElementById('cb-empty-msg').classList.add('hidden');
+        }
+
+        filteredStats.forEach((stat, index) => {
+            // Include companies that have at least one candidate or budget
+            if (stat.candidates > 0 || stat.budgetLimit > 0 || activeCompany === stat.name) {
+                totalGlobalBudget += stat.budgetLimit;
+                totalCandidates += stat.candidates;
+                totalCompanies += 1;
+
+                const budgetFormatted = stat.budgetLimit > 0 ? 'Rp ' + stat.budgetLimit.toLocaleString('id-ID') : 'Rp 0';
+                
+                const row = `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-4 px-6 text-sm font-medium text-slate-400 text-center">${index + 1}</td>
+                        <td class="py-4 px-6">
+                            <div class="font-bold text-slate-700">${stat.name}</div>
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <span class="inline-flex items-center justify-center bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold w-12">
+                                ${stat.candidates}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-right">
+                            <div class="font-mono text-sm font-bold text-slate-700">${budgetFormatted}</div>
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <button onclick="openCBDetailModal('${stat.name}')" class="text-xs bg-slate-50 border border-slate-200 text-slate-600 hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200 px-3 py-1.5 rounded transition-colors w-full focus:outline-none" title="Detail Kandidat">
+                                Detail
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            }
+        });
+
+        // Update Summary Cards
+        document.getElementById('cb-total-budget').innerText = 'Rp ' + totalGlobalBudget.toLocaleString('id-ID');
+        document.getElementById('cb-total-candidates').innerText = totalCandidates + ' Karyawan';
+        document.getElementById('cb-total-companies').innerText = totalCompanies + ' Perusahaan';
+    }
+
+    function exportCompanyBudgetReport() {
+        const rows = [['No', 'Unit Bisnis (Perusahaan)', 'Qty Kandidat', 'Total Budget Limit']];
+        
+        const companyStats = {};
+        masterData.filter(m => m.category === 'Company').forEach(m => {
+            if (!companyStats[m.value]) {
+                companyStats[m.value] = { name: m.value, candidates: 0, budgetLimit: 0 };
+            }
+        });
+
+        employeeData.forEach(emp => {
+            if (emp.company) {
+                if (!companyStats[emp.company]) {
+                    companyStats[emp.company] = { name: emp.company, candidates: 0, budgetLimit: 0 };
+                }
+                companyStats[emp.company].candidates += 1;
+                companyStats[emp.company].budgetLimit += (parseInt(emp.budget) || 0);
+            }
+        });
+
+        let filteredStats = Object.values(companyStats);
+        if (activeCompany !== 'Global') {
+            filteredStats = filteredStats.filter(c => c.name === activeCompany);
+        }
+
+        filteredStats.sort((a, b) => b.budgetLimit - a.budgetLimit || a.name.localeCompare(b.name));
+
+        let i = 1;
+        filteredStats.forEach(stat => {
+            if (stat.candidates > 0 || stat.budgetLimit > 0 || activeCompany === stat.name) {
+                rows.push([
+                    i++,
+                    `"${stat.name}"`,
+                    stat.candidates,
+                    stat.budgetLimit
+                ]);
+            }
+        });
+
+        let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Company_Budget_Report_${activeCompany}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>

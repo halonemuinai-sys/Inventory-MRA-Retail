@@ -1,0 +1,130 @@
+<!-- HELPDESK INPUT TIKET VIEW -->
+<section id="helpdesk-input" class="page-section hidden">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-8 py-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                        <i class="fa-solid fa-headset text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Laporan Gangguan IT</h3>
+                        <p class="text-brand-100 text-xs">Silakan isi form berikut untuk melaporkan kendala.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="helpdesk-form" onsubmit="handleHelpdeskSubmit(event)" class="p-8 space-y-5">
+                <!-- Row 1: Date & Time (auto-filled) -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Tanggal Lapor</label>
+                        <input type="date" id="hd-date" title="Tanggal Lapor"
+                            class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:bg-white transition-colors text-slate-700 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Jam Lapor</label>
+                        <input type="time" id="hd-time" title="Jam Lapor"
+                            class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-500 focus:bg-white transition-colors text-slate-700 font-medium">
+                    </div>
+                </div>
+
+                <!-- Row 2: Nama Pelapor (sync dari Data Karyawan) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Nama Pelapor</label>
+                    <select id="hd-reporter" title="Nama Pelapor" required
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Karyawan --</option>
+                        <!-- Options loaded from employeeData -->
+                    </select>
+                </div>
+
+                <!-- Row 3: Ticket Source (dynamic from Master_Data) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Ticket Source</label>
+                    <select id="hd-source" title="Ticket Source" required
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                        <option value="" disabled selected>-- Select Source --</option>
+                        <!-- Options loaded from Master_Data: HD_Source -->
+                    </select>
+                </div>
+
+                <!-- Row 4: Location -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Lokasi Pelapor</label>
+                    <select id="hd-location" title="Lokasi Pelapor" required
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Lokasi --</option>
+                        <option value="Head Office MRA Retail">Head Office MRA Retail</option>
+                        <option value="Bvlgari Butik Plaza Indonesia">Bvlgari Butik Plaza Indonesia</option>
+                        <option value="Bvlgari Butik Plaza Senayan">Bvlgari Butik Plaza Senayan</option>
+                        <option value="Bvlgari Butik Bali">Bvlgari Butik Bali</option>
+                    </select>
+                </div>
+
+                <!-- Row 3: Category (dynamic from Master_Data) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Kategori Masalah</label>
+                    <select id="hd-category" title="Kategori Masalah" required
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Kategori --</option>
+                        <!-- Options loaded from Master_Data: HD_Kategori -->
+                    </select>
+                </div>
+
+                <!-- Row 4: Issue Title -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Judul Masalah</label>
+                    <input type="text" id="hd-issue-title" placeholder="Ringkasan singkat masalah..." required
+                        class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-700 transition-colors">
+                </div>
+
+                <!-- Row 5: Description -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Deskripsi Kendala</label>
+                    <textarea id="hd-description" placeholder="Jelaskan kendala yang dialami secara detail..." required
+                        class="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm outline-none h-28 focus:border-brand-500 resize-none transition-colors"></textarea>
+                </div>
+
+                <!-- Row 5: Priority & Impact -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Prioritas</label>
+                        <select id="hd-priority" title="Prioritas" required
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                            <option value="Low">Low (Tidak Mendesak)</option>
+                            <option value="Medium" selected>Medium (Standard)</option>
+                            <option value="High">High (Prioritas Tinggi)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1.5">Dampak Sistem</label>
+                        <select id="hd-impact" title="Dampak Kestabilan & Ketersediaan"
+                            class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm outline-none focus:border-brand-500 text-slate-600 cursor-pointer">
+                            <option value="" disabled selected>-- Pilih Dampak --</option>
+                            <!-- Options loaded from Master_Data: HD_Dampak -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" id="hd-btn-submit"
+                    class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-600/20 transition-all flex justify-center items-center gap-2 mt-2">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Tiket
+                </button>
+            </form>
+        </div>
+
+        <!-- Recent Ticket Confirmation -->
+        <div id="hd-success-msg" class="hidden mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-emerald-700">Tiket berhasil dibuat!</div>
+                <div class="text-xs text-emerald-600" id="hd-success-id">Ticket ID: -</div>
+            </div>
+        </div>
+    </div>
+</section>

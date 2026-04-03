@@ -1,0 +1,191 @@
+<!-- HELPDESK DAFTAR TIKET VIEW -->
+<section id="helpdesk-list" class="page-section hidden">
+    <div class="space-y-4">
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="filterHelpdeskByStatus('all')" id="hd-filter-all"
+                    class="hd-filter-btn active px-4 py-2 rounded-lg text-xs font-bold transition-all">
+                    Semua <span id="hd-count-all" class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+                </button>
+                <button onclick="filterHelpdeskByStatus('Open')" id="hd-filter-Open"
+                    class="hd-filter-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-circle text-red-400 text-[8px] mr-1"></i> Open <span id="hd-count-Open" class="ml-1 bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                </button>
+                <button onclick="filterHelpdeskByStatus('In Progress')" id="hd-filter-InProgress"
+                    class="hd-filter-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-circle text-blue-400 text-[8px] mr-1"></i> In Progress <span id="hd-count-InProgress" class="ml-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                </button>
+                <button onclick="filterHelpdeskByStatus('Pending Vendor')" id="hd-filter-PendingVendor"
+                    class="hd-filter-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-circle text-yellow-400 text-[8px] mr-1"></i> Pending Vendor <span id="hd-count-PendingVendor" class="ml-1 bg-yellow-100 text-yellow-600 px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                </button>
+                <button onclick="filterHelpdeskByStatus('Resolved')" id="hd-filter-Resolved"
+                    class="hd-filter-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-circle text-emerald-400 text-[8px] mr-1"></i> Resolved <span id="hd-count-Resolved" class="ml-1 bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                </button>
+                <button onclick="filterHelpdeskByStatus('Closed')" id="hd-filter-Closed"
+                    class="hd-filter-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:bg-slate-50">
+                    <i class="fa-solid fa-circle text-slate-400 text-[8px] mr-1"></i> Closed <span id="hd-count-Closed" class="ml-1 bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[10px] hidden">0</span>
+                </button>
+                <div class="ml-auto">
+                    <button onclick="loadHelpdeskTickets()" title="Refresh Tiket"
+                        class="text-slate-400 hover:text-brand-600 transition-colors px-2 py-1 rounded"><i
+                            class="fa-solid fa-rotate"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticket Table -->
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ticket ID</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pelapor</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tanggal</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lokasi</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kategori</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Judul Masalah</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Prioritas</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">SLA</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dampak</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hd-table-body" class="divide-y divide-slate-50">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="hd-list-empty" class="hidden text-center py-16">
+                <i class="fa-regular fa-folder-open text-4xl text-slate-200 mb-3"></i>
+                <p class="text-sm text-slate-400 font-medium">Belum ada tiket helpdesk.</p>
+                <p class="text-xs text-slate-300 mt-1">Tiket baru akan muncul di sini.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail / Edit Modal -->
+    <div id="hd-detail-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white px-6 pt-6 pb-3 border-b border-slate-100 flex justify-between items-center z-10">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">Detail Tiket</h3>
+                    <div class="text-xs font-mono text-slate-400 mt-0.5" id="hd-modal-ticket-id">-</div>
+                </div>
+                <button onclick="closeHelpdeskDetail()" title="Tutup"
+                    class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="hd-detail-form" onsubmit="handleHelpdeskUpdate(event)" class="p-6 space-y-4">
+                <input type="hidden" id="hd-edit-id">
+                
+                <!-- Info Section (read-only) -->
+                <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Pelapor</span>
+                        <span class="text-slate-700 font-bold" id="hd-modal-reporter">-</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Ticket Source</span>
+                        <span class="text-slate-700 font-medium" id="hd-modal-source">-</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Tanggal Lapor</span>
+                        <span class="text-slate-700 font-medium" id="hd-modal-date">-</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Lokasi</span>
+                        <span class="text-slate-700 font-medium" id="hd-modal-location">-</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Kategori</span>
+                        <span class="text-slate-700 font-medium" id="hd-modal-category">-</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500 font-semibold">Prioritas</span>
+                        <span class="font-bold" id="hd-modal-priority">-</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-200">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Judul Masalah</div>
+                        <p class="text-xs text-slate-800 font-bold leading-relaxed" id="hd-modal-title">-</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-200">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Deskripsi</div>
+                        <p class="text-xs text-slate-700 leading-relaxed" id="hd-modal-desc">-</p>
+                    </div>
+                </div>
+
+                <!-- Editable Fields -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Status Tiket</label>
+                        <select id="hd-edit-status" title="Status Tiket"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500 font-bold cursor-pointer">
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Pending Vendor">Pending Vendor</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Status SLA</label>
+                        <select id="hd-edit-sla" title="Status SLA"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500 font-bold cursor-pointer">
+                            <option value="">-- Belum --</option>
+                            <option value="Achieved">Achieved</option>
+                            <option value="Breached">Breached</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Tgl Respon Awal</label>
+                        <input type="date" id="hd-edit-response-date" title="Tanggal Respon Awal"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Jam Respon Awal</label>
+                        <input type="time" id="hd-edit-response-time" title="Jam Respon Awal"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Tgl Selesai</label>
+                        <input type="date" id="hd-edit-resolved-date" title="Tanggal Selesai"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Jam Selesai</label>
+                        <input type="time" id="hd-edit-resolved-time" title="Jam Selesai"
+                            class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Dampak Kestabilan & Ketersediaan</label>
+                    <select id="hd-edit-impact" title="Dampak Sistem"
+                        class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-brand-500 font-bold cursor-pointer">
+                        <option value="">-- Pilih --</option>
+                        <!-- Options loaded from Master_Data: HD_Dampak -->
+                    </select>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-600/20 transition-all flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
+                </button>
+            </form>
+        </div>
+    </div>
+</section>

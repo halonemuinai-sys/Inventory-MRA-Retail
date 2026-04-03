@@ -18,6 +18,7 @@ function setupDatabase() {
     'Employees': ['id', 'company', 'name', 'role', 'department', 'email', 'status', 'assignedAssetId', 'joinDate', 'budget'], 
     'Users': ['username', 'password', 'name', 'role'], 
     'Tickets': ['id', 'ticketDate', 'reporterId', 'reporterName', 'issueCategory', 'priority', 'subject', 'description', 'assetId', 'assetName', 'status', 'resolution', 'updatedAt'],
+    'HelpdeskTickets': ['id', 'reporterName', 'ticketSource', 'ticketDate', 'ticketTime', 'location', 'category', 'issueTitle', 'description', 'priority', 'status', 'responseDate', 'responseTime', 'resolvedDate', 'resolvedTime', 'slaStatus', 'impactLevel', 'updatedAt'],
     'AssetHistory': ['id', 'assetId', 'action', 'empId', 'empName', 'date', 'notes', 'updatedAt'],
     'Master_Data': ['category', 'value'], 
     'Config': ['key', 'value'],

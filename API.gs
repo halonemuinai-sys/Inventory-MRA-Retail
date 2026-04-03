@@ -16,7 +16,8 @@ function apiGetAllData(year) {
     config: getData('Config'),
     users: apiGetUsers(), // Reuse safe user fetch
     costAnalysis: calculateCostAnalysis(year),
-    gisLocations: getGISLocationNames()
+    gisLocations: getGISLocationNames(),
+    helpdeskTickets: getData('HelpdeskTickets')
   };
 }
 
@@ -293,4 +294,146 @@ function apiResolveTicket(id) {
     return updateRow('Tickets', id, ticket);
   }
   return { success: false, message: "Tiket tidak ditemukan" };
+}
+
+// --- Helpdesk Ticketing System APIs ---
+
+function apiAddHelpdeskTicket(data) {
+  // Auto-generate Ticket ID: HD-YYYYMMDD-XXX
+  const now = new Date();
+  const dateStr = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMdd');
+  const existing = getData('HelpdeskTickets');
+  const todayTickets = existing.filter(t => String(t.id).startsWith('HD-' + dateStr));
+  const seq = String(todayTickets.length + 1).padStart(3, '0');
+  
+  data.id = 'HD-' + dateStr + '-' + seq;
+  data.ticketDate = data.ticketDate || Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  data.ticketTime = data.ticketTime || Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+  data.status = 'Open';
+  data.slaStatus = '';
+  data.impactLevel = data.impactLevel || '';
+  data.responseDate = '';
+  data.responseTime = '';
+  data.resolvedDate = '';
+  data.resolvedTime = '';
+  
+  return addRow('HelpdeskTickets', data);
+}
+
+function apiGetHelpdeskTickets() {
+  const tickets = getData('HelpdeskTickets');
+  return tickets.sort((a, b) => {
+    // Sort: Open first, then by priority (High first), then by date desc
+    const statusOrder = { 'Open': 0, 'In Progress': 1, 'Pending Vendor': 2, 'Resolved': 3, 'Closed': 4 };
+    const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+    const sA = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 5;
+    const sB = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 5;
+    if (sA !== sB) return sA - sB;
+    const pA = priorityOrder[a.priority] !== undefined ? priorityOrder[a.priority] : 3;
+    const pB = priorityOrder[b.priority] !== undefined ? priorityOrder[b.priority] : 3;
+    if (pA !== pB) return pA - pB;
+    return new Date(b.ticketDate) - new Date(a.ticketDate);
+  });
+}
+
+function apiUpdateHelpdeskTicket(data) {
+  if (!data.id) return { success: false, message: "Ticket ID required" };
+  
+  // If status changed to In Progress and no responseDate, auto-set
+  if (data.status === 'In Progress' && !data.responseDate) {
+    const now = new Date();
+    data.responseDate = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    data.responseTime = Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  
+  // If status changed to Resolved/Closed and no resolvedDate, auto-set
+  if ((data.status === 'Resolved' || data.status === 'Closed') && !data.resolvedDate) {
+    const now = new Date();
+    data.resolvedDate = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    data.resolvedTime = Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  
+  return updateRow('HelpdeskTickets', data.id, data);
+}
+
+function apiGetHelpdeskDashboard() {
+  const tickets = getData('HelpdeskTickets');
+  
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter(t => t.status === 'Open').length;
+  const inProgressTickets = tickets.filter(t => t.status === 'In Progress').length;
+  const pendingVendor = tickets.filter(t => t.status === 'Pending Vendor').length;
+  const resolvedTickets = tickets.filter(t => t.status === 'Resolved' || t.status === 'Closed').length;
+  
+  // Per Location
+  const perLocation = {};
+  tickets.forEach(t => {
+    perLocation[t.location] = (perLocation[t.location] || 0) + 1;
+  });
+  
+  // Per Category
+  const perCategory = {};
+  tickets.forEach(t => {
+    perCategory[t.category] = (perCategory[t.category] || 0) + 1;
+  });
+  
+  // SLA Stats
+  const slaAchieved = tickets.filter(t => t.slaStatus === 'Achieved').length;
+  const slaBreached = tickets.filter(t => t.slaStatus === 'Breached').length;
+  const slaPending = totalTickets - slaAchieved - slaBreached;
+  
+  // Downtime per location (tickets with impactLevel = 'Sistem Down')
+  const downtimePerLocation = {};
+  tickets.forEach(t => {
+    if (t.impactLevel === 'Sistem Down') {
+      if (!downtimePerLocation[t.location]) downtimePerLocation[t.location] = { count: 0, totalMinutes: 0 };
+      downtimePerLocation[t.location].count++;
+      // Calculate duration if resolved
+      if (t.ticketDate && t.ticketTime && t.resolvedDate && t.resolvedTime) {
+        const start = new Date(t.ticketDate + 'T' + t.ticketTime);
+        const end = new Date(t.resolvedDate + 'T' + t.resolvedTime);
+        const diffMinutes = Math.max(0, (end - start) / (1000 * 60));
+        downtimePerLocation[t.location].totalMinutes += diffMinutes;
+      }
+    }
+  });
+  
+  // Resolution rate
+  const resolutionRate = totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0;
+  
+  // Average response time (minutes) for tickets that have responseDate
+  let totalResponseMinutes = 0;
+  let responseCount = 0;
+  tickets.forEach(t => {
+    if (t.ticketDate && t.ticketTime && t.responseDate && t.responseTime) {
+      const start = new Date(t.ticketDate + 'T' + t.ticketTime);
+      const end = new Date(t.responseDate + 'T' + t.responseTime);
+      const diff = Math.max(0, (end - start) / (1000 * 60));
+      totalResponseMinutes += diff;
+      responseCount++;
+    }
+  });
+  const avgResponseMinutes = responseCount > 0 ? Math.round(totalResponseMinutes / responseCount) : 0;
+  
+  // Average resolution time (minutes) for resolved tickets
+  let totalResolveMinutes = 0;
+  let resolveCount = 0;
+  tickets.forEach(t => {
+    if (t.ticketDate && t.ticketTime && t.resolvedDate && t.resolvedTime) {
+      const start = new Date(t.ticketDate + 'T' + t.ticketTime);
+      const end = new Date(t.resolvedDate + 'T' + t.resolvedTime);
+      const diff = Math.max(0, (end - start) / (1000 * 60));
+      totalResolveMinutes += diff;
+      resolveCount++;
+    }
+  });
+  const avgResolveMinutes = resolveCount > 0 ? Math.round(totalResolveMinutes / resolveCount) : 0;
+  
+  return {
+    totalTickets, openTickets, inProgressTickets, pendingVendor, resolvedTickets,
+    perLocation, perCategory,
+    slaAchieved, slaBreached, slaPending,
+    downtimePerLocation,
+    resolutionRate, avgResponseMinutes, avgResolveMinutes
+  };
 }

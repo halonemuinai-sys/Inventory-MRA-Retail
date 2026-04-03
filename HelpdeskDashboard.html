@@ -1,0 +1,145 @@
+<!-- HELPDESK DASHBOARD VIEW -->
+<section id="helpdesk-dashboard" class="page-section hidden">
+    <div class="space-y-6">
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tiket</span>
+                    <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs"><i class="fa-solid fa-ticket"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-slate-800" id="hd-dash-total">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Open</span>
+                    <div class="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-xs"><i class="fa-solid fa-exclamation"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-red-600" id="hd-dash-open">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resolved</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-xs"><i class="fa-solid fa-check-double"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-emerald-600" id="hd-dash-resolved">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SLA Achievement</span>
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center text-xs"><i class="fa-solid fa-bullseye"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-blue-600" id="hd-dash-sla-rate">0%</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resolution Rate</span>
+                    <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center text-xs"><i class="fa-solid fa-chart-line"></i></div>
+                </div>
+                <div class="text-2xl font-bold text-indigo-600" id="hd-dash-resolve-rate">0%</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart: Per Location -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot text-brand-600"></i> Tiket per Lokasi
+                </h4>
+                <div class="relative h-64"><canvas id="chart-hd-location"></canvas></div>
+            </div>
+
+            <!-- Chart: Per Category -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-brand-600"></i> Tiket per Kategori
+                </h4>
+                <div class="relative h-64 flex items-center justify-center"><canvas id="chart-hd-category"></canvas></div>
+            </div>
+
+            <!-- Chart: SLA Summary -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-brand-600"></i> Ringkasan SLA
+                </h4>
+                <div class="relative h-64 flex items-center justify-center"><canvas id="chart-hd-sla"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Avg Response & Resolution -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-stopwatch text-brand-600"></i> Performa Waktu Respon
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+                        <div class="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Avg. Respon Awal</div>
+                        <div class="text-xl font-bold text-blue-700" id="hd-dash-avg-response">-</div>
+                    </div>
+                    <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
+                        <div class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-1">Avg. Penyelesaian</div>
+                        <div class="text-xl font-bold text-emerald-700" id="hd-dash-avg-resolve">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Breakdown -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-simple text-brand-600"></i> Distribusi Status
+                </h4>
+                <div class="space-y-3" id="hd-dash-status-bars">
+                    <!-- Injected bars -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Downtime Report Table -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-red-500"></i> Laporan Downtime per Lokasi
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Lokasi</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Jumlah Insiden Down</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Total Downtime</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Avg. per Insiden</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hd-downtime-body" class="divide-y divide-slate-50">
+                        <!-- Injected -->
+                    </tbody>
+                </table>
+                <div id="hd-downtime-empty" class="hidden text-center py-8">
+                    <p class="text-sm text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 mr-1"></i> Tidak ada insiden Sistem Down tercatat.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resolution Summary -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h4 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-brand-600"></i> Summary Penyelesaian Tiket
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Metrik</th>
+                            <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hd-summary-body" class="divide-y divide-slate-50">
+                        <!-- Injected -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

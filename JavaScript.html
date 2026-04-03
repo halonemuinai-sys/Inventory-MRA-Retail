@@ -52,17 +52,45 @@
                                 ],
                                 masterData: [
                                     { category: 'Brand', value: 'Dell' }, { category: 'Brand', value: 'Apple' },
-                                    { category: 'Company', value: 'PT. Tech Corp' }
+                                    { category: 'Company', value: 'PT. Tech Corp' },
+                                    { category: 'HD_Kategori', value: 'Sistem POS' },
+                                    { category: 'HD_Kategori', value: 'Jaringan' },
+                                    { category: 'HD_Kategori', value: 'Perangkat IT Pendukung' },
+                                    { category: 'HD_Dampak', value: 'Sistem Down' },
+                                    { category: 'HD_Dampak', value: 'Sistem Lambat' },
+                                    { category: 'HD_Dampak', value: 'Beroperasi Normal' }
                                 ],
                                 config: [['RentalWarning', 30]],
                                 users: [{ id: 'u1', username: 'admin', name: 'Administrator', role: 'admin' }],
                                 costAnalysis: { 'PT. Tech Corp': [1500000, 389000] },
-                                gisLocations: [{ name: "Bvlgari Plaza Ind", brand: "Bvlgari" }]
+                                gisLocations: [{ name: "Bvlgari Plaza Ind", brand: "Bvlgari" }],
+                                helpdeskTickets: [
+                                    { id: 'HD-20260403-001', reporterName: 'Siti Nurhaliza', ticketDate: '2026-04-03', ticketTime: '09:00', location: 'Bvlgari Butik Plaza Indonesia', category: 'Sistem POS', issueTitle: 'POS Gagal Login', description: 'POS tidak bisa login sejak pagi, sudah coba restart berkali-kali', priority: 'High', status: 'Open', responseDate: '', responseTime: '', resolvedDate: '', resolvedTime: '', slaStatus: '', impactLevel: 'Sistem Down' },
+                                    { id: 'HD-20260402-001', reporterName: 'Ahmad Rizky', ticketDate: '2026-04-02', ticketTime: '14:30', location: 'Head Office MRA Retail', category: 'Jaringan', issueTitle: 'Internet Lambat Lt.2', description: 'Internet lambat di lantai 2, speed test hanya 2 Mbps', priority: 'Medium', status: 'In Progress', responseDate: '2026-04-02', responseTime: '15:00', resolvedDate: '', resolvedTime: '', slaStatus: '', impactLevel: 'Sistem Lambat' },
+                                    { id: 'HD-20260401-001', reporterName: 'Made Dewi', ticketDate: '2026-04-01', ticketTime: '10:00', location: 'Bvlgari Butik Bali', category: 'Perangkat IT Pendukung', issueTitle: 'Printer Struk Error', description: 'Printer struk tidak berfungsi, lampu indikator merah berkedip', priority: 'Low', status: 'Resolved', responseDate: '2026-04-01', responseTime: '10:30', resolvedDate: '2026-04-01', resolvedTime: '12:00', slaStatus: 'Achieved', impactLevel: 'Beroperasi Normal' }
+                                ]
                             }), 1000)
                         };
-                    }
+                    },
+                    withFailureHandler: function() { return this; }
                 }
             }
+        };
+        // Add helpdesk mock methods to the mock API
+        const origWith = window.google.script.run.withSuccessHandler;
+        const helpdeskMockMethods = {
+            apiAddHelpdeskTicket: (cb) => (data) => setTimeout(() => cb({ success: true }), 500),
+            apiGetHelpdeskTickets: (cb) => () => setTimeout(() => cb([]), 500),
+            apiUpdateHelpdeskTicket: (cb) => (data) => setTimeout(() => cb({ success: true }), 500),
+            apiGetHelpdeskDashboard: (cb) => () => setTimeout(() => cb({ totalTickets: 3, openTickets: 1, inProgressTickets: 1, pendingVendor: 0, resolvedTickets: 1, perLocation: { 'Bvlgari Butik Plaza Indonesia': 1, 'Head Office MRA Retail': 1, 'Bvlgari Butik Bali': 1 }, perCategory: { 'Sistem POS': 1, 'Jaringan': 1, 'Perangkat IT Pendukung': 1 }, slaAchieved: 1, slaBreached: 0, slaPending: 2, downtimePerLocation: { 'Bvlgari Butik Plaza Indonesia': { count: 1, totalMinutes: 0 } }, resolutionRate: 33, avgResponseMinutes: 25, avgResolveMinutes: 120 }), 500)
+        };
+        const origHandler = window.google.script.run.withSuccessHandler;
+        window.google.script.run.withSuccessHandler = function(callback) {
+            const result = origHandler(callback);
+            Object.keys(helpdeskMockMethods).forEach(method => {
+                result[method] = helpdeskMockMethods[method](callback);
+            });
+            return result;
         };
     }
 
@@ -72,6 +100,7 @@
     let activeCompany = 'Global';
     let selectedGlobalYear = new Date().getFullYear();
     let chartInstanceCombined = null;
+    let chartInstanceCostAnalysis = null;
     let currentUser = null;
 
     // Auto-login check
@@ -170,6 +199,7 @@
             populateYearDropdown('dash-year-select');
             populateYearDropdown('cost-year-select');
             populateYearDropdown('rental-year');
+            populateYearDropdown('cb-year-select');
             populateCompanySelector();
 
             renderRentalReport();
@@ -186,6 +216,15 @@
             renderCostTable();
             renderBudgetTable();
             if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();
+            if(typeof renderCompanyBudgetTable === 'function') renderCompanyBudgetTable();
+
+            // Helpdesk Ticketing System
+            if (typeof helpdeskTickets !== 'undefined') {
+                helpdeskTickets = data.helpdeskTickets || [];
+                if (typeof updateHelpdeskBadge === 'function') updateHelpdeskBadge();
+                if (typeof initHelpdeskForm === 'function') initHelpdeskForm();
+                if (typeof populateHelpdeskDropdowns === 'function') populateHelpdeskDropdowns();
+            }
 
             showLoading(false);
         }).apiGetAllData(selectedGlobalYear);
@@ -335,6 +374,7 @@
         renderBudgetTable();
         renderRentalReport(); // Update Rental Report
         if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();
+        if(typeof renderCompanyBudgetTable === 'function') renderCompanyBudgetTable();
         populateCompanySelector();
     }
     function updateDashboard() {
@@ -1201,6 +1241,81 @@
             ${totalCells}
             <td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-white bg-slate-800">${grandTotalAll.toLocaleString('id-ID')}</td>
         </tr>`;
+        
+        if (typeof renderCostChart === 'function') renderCostChart(monthlyTotals);
+    }
+    
+    function renderCostChart(monthlyTotals) {
+        const ctx = document.getElementById('cost-line-chart');
+        if (!ctx) return;
+        
+        if (chartInstanceCostAnalysis) {
+            chartInstanceCostAnalysis.destroy();
+        }
+        
+        chartInstanceCostAnalysis = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'],
+                datasets: [{
+                    label: 'Proyeksi Biaya Sewa (Rp)',
+                    data: monthlyTotals,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#2563eb',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [2, 4], color: '#e2e8f0' },
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + ' Jt';
+                                if (value >= 1000) return (value / 1000) + 'k';
+                                return value;
+                            },
+                            font: { size: 10, family: "'Inter', sans-serif" },
+                            color: '#64748b'
+                        },
+                        border: { display: false }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10, family: "'Inter', sans-serif" }, color: '#64748b' },
+                        border: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 12, family: "'Inter', sans-serif" },
+                        bodyFont: { size: 12, family: "'Inter', sans-serif" },
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Rp ' + context.raw.toLocaleString('id-ID');
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     function openCostBreakdownModal(company) {

@@ -1,0 +1,577 @@
+<script>
+    // --- HELPDESK TICKETING SYSTEM JS ---
+
+    let helpdeskTickets = [];
+    let helpdeskFilterStatus = 'all';
+    let chartHelpdeskLocation = null;
+    let chartHelpdeskCategory = null;
+    let chartHelpdeskSLA = null;
+
+    // --- AUTO-FILL DATE & TIME ---
+    function initHelpdeskForm() {
+        const now = new Date();
+        const dateEl = document.getElementById('hd-date');
+        const timeEl = document.getElementById('hd-time');
+        if (dateEl) dateEl.value = now.toISOString().split('T')[0];
+        if (timeEl) {
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            timeEl.value = hh + ':' + mm;
+        }
+    }
+
+    // --- POPULATE DROPDOWNS FROM MASTER_DATA & EMPLOYEE DATA ---
+    function populateHelpdeskDropdowns() {
+        // --- Nama Pelapor from employeeData ---
+        const reporterSel = document.getElementById('hd-reporter');
+        if (reporterSel && typeof employeeData !== 'undefined' && employeeData) {
+            const currentVal = reporterSel.value;
+            reporterSel.innerHTML = '<option value="" disabled selected>-- Pilih Karyawan --</option>';
+            // Sort by name and populate
+            const sorted = [...employeeData].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            sorted.forEach(emp => {
+                if (!emp.name) return;
+                const opt = document.createElement('option');
+                opt.value = emp.name;
+                opt.textContent = emp.name + (emp.department ? ' — ' + emp.department : '');
+                reporterSel.appendChild(opt);
+            });
+            if (currentVal) reporterSel.value = currentVal;
+        }
+
+        // --- Master Data dropdowns ---
+        if (typeof masterData === 'undefined' || !masterData) return;
+
+        // Helper: populate a select with values from masterData by category
+        function fillSelect(selectId, category, placeholder) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="" disabled selected>' + placeholder + '</option>';
+            const items = masterData.filter(m => m.category === category);
+            items.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.value;
+                opt.textContent = m.value;
+                sel.appendChild(opt);
+            });
+            if (currentVal) sel.value = currentVal;
+        }
+
+        // Kategori Masalah (Input Form)
+        fillSelect('hd-category', 'HD_Kategori', '-- Pilih Kategori --');
+        
+        // Dampak Sistem (Input Form)
+        fillSelect('hd-impact', 'HD_Dampak', '-- Pilih Dampak --');
+        
+        // Dampak Sistem (Edit Modal)
+        fillSelect('hd-edit-impact', 'HD_Dampak', '-- Pilih --');
+
+        // Ticket Source (Input Form)
+        fillSelect('hd-source', 'HD_Source', '-- Select Source --');
+    }
+
+    // --- SUBMIT TICKET ---
+    function handleHelpdeskSubmit(e) {
+        e.preventDefault();
+
+        const location = document.getElementById('hd-location').value;
+        const category = document.getElementById('hd-category').value;
+        const description = document.getElementById('hd-description').value;
+        const priority = document.getElementById('hd-priority').value;
+        const impact = document.getElementById('hd-impact').value;
+
+        if (!location || !category || !description) {
+            alert("Mohon lengkapi: Lokasi, Kategori, dan Deskripsi.");
+            return;
+        }
+
+        const btn = document.getElementById('hd-btn-submit');
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Mengirim...';
+        btn.disabled = true;
+        showLoading(true);
+
+        const reporter = document.getElementById('hd-reporter').value;
+
+        const ticketData = {
+            reporterName: reporter,
+            ticketSource: document.getElementById('hd-source').value,
+            ticketDate: document.getElementById('hd-date').value,
+            ticketTime: document.getElementById('hd-time').value,
+            location: location,
+            category: category,
+            issueTitle: document.getElementById('hd-issue-title').value,
+            description: description,
+            priority: priority,
+            impactLevel: impact
+        };
+
+        google.script.run.withSuccessHandler(res => {
+            showLoading(false);
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Tiket';
+            btn.disabled = false;
+
+            if (res.success) {
+                // Show success message
+                document.getElementById('hd-success-msg').classList.remove('hidden');
+                document.getElementById('hd-success-id').innerText = 'Tiket telah dikirim ke tim IT.';
+
+                // Reset form
+                document.getElementById('helpdesk-form').reset();
+                initHelpdeskForm(); // Re-fill date/time
+
+                // Auto-hide success after 5s
+                setTimeout(() => {
+                    document.getElementById('hd-success-msg').classList.add('hidden');
+                }, 5000);
+
+                // Refresh data
+                if (typeof refreshData === 'function') refreshData();
+            } else {
+                alert("❌ Gagal membuat tiket: " + (res.message || 'Unknown error'));
+            }
+        }).apiAddHelpdeskTicket(ticketData);
+    }
+
+    // --- LOAD TICKETS ---
+    function loadHelpdeskTickets() {
+        const tbody = document.getElementById('hd-table-body');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-10 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i> Memuat...</td></tr>';
+
+        google.script.run.withSuccessHandler(tickets => {
+            helpdeskTickets = tickets || [];
+            renderHelpdeskList();
+            updateHelpdeskBadge();
+        }).apiGetHelpdeskTickets();
+    }
+
+    // --- RENDER TICKET LIST ---
+    function renderHelpdeskList() {
+        const tbody = document.getElementById('hd-table-body');
+        const emptyMsg = document.getElementById('hd-list-empty');
+        if (!tbody) return;
+
+        // Count per status
+        const counts = { all: helpdeskTickets.length };
+        ['Open', 'In Progress', 'Pending Vendor', 'Resolved', 'Closed'].forEach(s => {
+            const key = s.replace(/\s/g, '');
+            counts[key] = helpdeskTickets.filter(t => t.status === s).length;
+            const badge = document.getElementById('hd-count-' + key);
+            if (badge) {
+                badge.innerText = counts[key];
+                if (counts[key] > 0) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+        });
+        const allBadge = document.getElementById('hd-count-all');
+        if (allBadge) allBadge.innerText = counts.all;
+
+        // Filter
+        let filtered = helpdeskTickets;
+        if (helpdeskFilterStatus !== 'all') {
+            filtered = helpdeskTickets.filter(t => t.status === helpdeskFilterStatus);
+        }
+
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            emptyMsg.classList.remove('hidden');
+            return;
+        }
+        emptyMsg.classList.add('hidden');
+
+        filtered.forEach(t => {
+            // Priority badge
+            let priBadge = '';
+            if (t.priority === 'High') priBadge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200">High</span>';
+            else if (t.priority === 'Medium') priBadge = '<span class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-bold border border-yellow-200">Medium</span>';
+            else priBadge = '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">Low</span>';
+
+            // Status badge
+            const statusColors = {
+                'Open': 'bg-red-100 text-red-600 border-red-200',
+                'In Progress': 'bg-blue-100 text-blue-600 border-blue-200',
+                'Pending Vendor': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                'Resolved': 'bg-emerald-100 text-emerald-600 border-emerald-200',
+                'Closed': 'bg-slate-100 text-slate-500 border-slate-200'
+            };
+            const statusClass = statusColors[t.status] || 'bg-slate-100 text-slate-500 border-slate-200';
+            const statusBadge = `<span class="px-2 py-0.5 rounded-full ${statusClass} text-[10px] font-bold border">${t.status}</span>`;
+
+            // SLA badge
+            let slaBadge = '<span class="text-[10px] text-slate-300">-</span>';
+            if (t.slaStatus === 'Achieved') slaBadge = '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200"><i class="fa-solid fa-check mr-0.5"></i>Achieved</span>';
+            else if (t.slaStatus === 'Breached') slaBadge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200"><i class="fa-solid fa-xmark mr-0.5"></i>Breached</span>';
+
+            // Impact badge
+            let impactBadge = '<span class="text-[10px] text-slate-300">-</span>';
+            if (t.impactLevel === 'Sistem Down') impactBadge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200"><i class="fa-solid fa-bolt mr-0.5"></i>Down</span>';
+            else if (t.impactLevel === 'Sistem Lambat') impactBadge = '<span class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-bold border border-yellow-200"><i class="fa-solid fa-gauge-simple mr-0.5"></i>Lambat</span>';
+            else if (t.impactLevel === 'Beroperasi Normal') impactBadge = '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200"><i class="fa-solid fa-check mr-0.5"></i>Normal</span>';
+
+            const isResolved = t.status === 'Resolved' || t.status === 'Closed';
+            const opacity = isResolved ? 'opacity-60' : '';
+
+            // Truncate issue title for table
+            const titleShort = t.issueTitle ? (t.issueTitle.length > 40 ? t.issueTitle.substring(0, 40) + '...' : t.issueTitle) : '-';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition-colors cursor-pointer ${opacity}" onclick="openHelpdeskDetail('${t.id}')">
+                    <td class="px-4 py-3"><span class="text-xs font-mono font-bold text-brand-600">${t.id}</span></td>
+                    <td class="px-4 py-3"><div class="text-xs font-bold text-slate-800">${t.reporterName || '-'}</div><div class="text-[10px] text-slate-400">${t.location || ''}</div></td>
+                    <td class="px-4 py-3"><div class="text-xs text-slate-700 font-medium">${t.ticketDate || '-'}</div><div class="text-[10px] text-slate-400">${t.ticketTime || ''}</div></td>
+                    <td class="px-4 py-3"><span class="text-xs text-slate-700">${t.location || '-'}</span></td>
+                    <td class="px-4 py-3"><span class="text-xs text-slate-600 font-medium">${t.category || '-'}</span></td>
+                    <td class="px-4 py-3 max-w-[200px]"><span class="text-xs text-slate-700 font-semibold">${titleShort}</span></td>
+                    <td class="px-4 py-3">${priBadge}</td>
+                    <td class="px-4 py-3">${statusBadge}</td>
+                    <td class="px-4 py-3">${slaBadge}</td>
+                    <td class="px-4 py-3">${impactBadge}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="event.stopPropagation(); openHelpdeskDetail('${t.id}')" title="Edit Tiket"
+                            class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100">
+                            <i class="fa-regular fa-pen-to-square text-xs"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    // --- FILTER ---
+    function filterHelpdeskByStatus(status) {
+        helpdeskFilterStatus = status;
+
+        // Update button styles
+        document.querySelectorAll('.hd-filter-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-brand-50', 'text-brand-600', 'border', 'border-brand-200');
+            btn.classList.add('text-slate-500');
+        });
+        const key = status === 'all' ? 'all' : status.replace(/\s/g, '');
+        const activeBtn = document.getElementById('hd-filter-' + key);
+        if (activeBtn) {
+            activeBtn.classList.add('active', 'bg-brand-50', 'text-brand-600', 'border', 'border-brand-200');
+            activeBtn.classList.remove('text-slate-500');
+        }
+
+        renderHelpdeskList();
+    }
+
+    // --- DETAIL MODAL ---
+    function openHelpdeskDetail(id) {
+        const t = helpdeskTickets.find(tk => tk.id === id);
+        if (!t) return;
+
+        document.getElementById('hd-edit-id').value = t.id;
+        document.getElementById('hd-modal-ticket-id').innerText = t.id;
+        document.getElementById('hd-modal-reporter').innerText = t.reporterName || '-';
+        document.getElementById('hd-modal-source').innerText = t.ticketSource || '-';
+        document.getElementById('hd-modal-date').innerText = (t.ticketDate || '-') + ' ' + (t.ticketTime || '');
+        document.getElementById('hd-modal-location').innerText = t.location || '-';
+        document.getElementById('hd-modal-category').innerText = t.category || '-';
+        document.getElementById('hd-modal-title').innerText = t.issueTitle || '-';
+
+        const priEl = document.getElementById('hd-modal-priority');
+        priEl.innerText = t.priority || '-';
+        priEl.className = 'font-bold text-xs';
+        if (t.priority === 'High') priEl.classList.add('text-red-600');
+        else if (t.priority === 'Medium') priEl.classList.add('text-yellow-700');
+        else priEl.classList.add('text-slate-600');
+
+        document.getElementById('hd-modal-desc').innerText = t.description || '-';
+
+        // Editable fields
+        document.getElementById('hd-edit-status').value = t.status || 'Open';
+        document.getElementById('hd-edit-sla').value = t.slaStatus || '';
+        document.getElementById('hd-edit-response-date').value = t.responseDate || '';
+        document.getElementById('hd-edit-response-time').value = t.responseTime || '';
+        document.getElementById('hd-edit-resolved-date').value = t.resolvedDate || '';
+        document.getElementById('hd-edit-resolved-time').value = t.resolvedTime || '';
+        document.getElementById('hd-edit-impact').value = t.impactLevel || '';
+
+        document.getElementById('hd-detail-modal').classList.remove('hidden');
+    }
+
+    function closeHelpdeskDetail() {
+        document.getElementById('hd-detail-modal').classList.add('hidden');
+    }
+
+    // --- UPDATE TICKET ---
+    function handleHelpdeskUpdate(e) {
+        e.preventDefault();
+        showLoading(true);
+
+        const data = {
+            id: document.getElementById('hd-edit-id').value,
+            status: document.getElementById('hd-edit-status').value,
+            slaStatus: document.getElementById('hd-edit-sla').value,
+            responseDate: document.getElementById('hd-edit-response-date').value,
+            responseTime: document.getElementById('hd-edit-response-time').value,
+            resolvedDate: document.getElementById('hd-edit-resolved-date').value,
+            resolvedTime: document.getElementById('hd-edit-resolved-time').value,
+            impactLevel: document.getElementById('hd-edit-impact').value
+        };
+
+        google.script.run.withSuccessHandler(res => {
+            showLoading(false);
+            if (res.success) {
+                closeHelpdeskDetail();
+                loadHelpdeskTickets();
+                // Also refresh dashboard if visible
+            } else {
+                alert("Gagal update: " + (res.message || 'Error'));
+            }
+        }).apiUpdateHelpdeskTicket(data);
+    }
+
+    // --- SIDEBAR BADGE ---
+    function updateHelpdeskBadge() {
+        const badge = document.getElementById('sidebar-hd-badge');
+        if (!badge) return;
+        const openCount = helpdeskTickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length;
+        if (openCount > 0) {
+            badge.innerText = openCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    // --- DASHBOARD RENDER ---
+    function renderHelpdeskDashboard() {
+        showLoading(true);
+        google.script.run.withSuccessHandler(data => {
+            showLoading(false);
+            if (!data) return;
+
+            // KPI Cards
+            document.getElementById('hd-dash-total').innerText = data.totalTickets || 0;
+            document.getElementById('hd-dash-open').innerText = (data.openTickets || 0) + (data.inProgressTickets || 0);
+            document.getElementById('hd-dash-resolved').innerText = data.resolvedTickets || 0;
+
+            const slaTotal = (data.slaAchieved || 0) + (data.slaBreached || 0);
+            const slaRate = slaTotal > 0 ? Math.round((data.slaAchieved / slaTotal) * 100) : 0;
+            document.getElementById('hd-dash-sla-rate').innerText = slaRate + '%';
+            document.getElementById('hd-dash-resolve-rate').innerText = (data.resolutionRate || 0) + '%';
+
+            // Avg Response / Resolve
+            document.getElementById('hd-dash-avg-response').innerText = formatMinutes(data.avgResponseMinutes || 0);
+            document.getElementById('hd-dash-avg-resolve').innerText = formatMinutes(data.avgResolveMinutes || 0);
+
+            // --- Charts ---
+            renderChartLocation(data.perLocation || {});
+            renderChartCategory(data.perCategory || {});
+            renderChartSLA(data.slaAchieved || 0, data.slaBreached || 0, data.slaPending || 0);
+
+            // Status Distribution Bars
+            renderStatusBars(data);
+
+            // Downtime Table
+            renderDowntimeTable(data.downtimePerLocation || {});
+
+            // Summary Table
+            renderSummaryTable(data);
+
+        }).apiGetHelpdeskDashboard();
+    }
+
+    function formatMinutes(mins) {
+        if (mins === 0) return '0 min';
+        if (mins < 60) return mins + ' min';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        if (h < 24) return h + 'j ' + m + 'm';
+        const d = Math.floor(h / 24);
+        const rh = h % 24;
+        return d + 'h ' + rh + 'j';
+    }
+
+    // --- CHART: Location Bar ---
+    function renderChartLocation(perLocation) {
+        const ctx = document.getElementById('chart-hd-location');
+        if (!ctx) return;
+        if (chartHelpdeskLocation) chartHelpdeskLocation.destroy();
+
+        const labels = Object.keys(perLocation);
+        const values = Object.values(perLocation);
+        const colors = ['#6366f1', '#f97316', '#10b981', '#ef4444', '#8b5cf6'];
+
+        chartHelpdeskLocation = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels.map(l => l.length > 20 ? l.substring(0, 18) + '...' : l),
+                datasets: [{
+                    label: 'Jumlah Tiket',
+                    data: values,
+                    backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                    borderRadius: 8,
+                    barThickness: 32
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { borderDash: [2, 4], color: '#e2e8f0' } },
+                    y: { ticks: { font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // --- CHART: Category Doughnut ---
+    function renderChartCategory(perCategory) {
+        const ctx = document.getElementById('chart-hd-category');
+        if (!ctx) return;
+        if (chartHelpdeskCategory) chartHelpdeskCategory.destroy();
+
+        const labels = Object.keys(perCategory);
+        const values = Object.values(perCategory);
+        const colors = ['#6366f1', '#f97316', '#10b981', '#ef4444', '#8b5cf6'];
+
+        chartHelpdeskCategory = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // --- CHART: SLA Pie ---
+    function renderChartSLA(achieved, breached, pending) {
+        const ctx = document.getElementById('chart-hd-sla');
+        if (!ctx) return;
+        if (chartHelpdeskSLA) chartHelpdeskSLA.destroy();
+
+        if (achieved === 0 && breached === 0 && pending === 0) {
+            // No data
+            chartHelpdeskSLA = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { display: false } } }
+            });
+            return;
+        }
+
+        chartHelpdeskSLA = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Achieved', 'Breached', 'Pending'],
+                datasets: [{
+                    data: [achieved, breached, pending],
+                    backgroundColor: ['#10b981', '#ef4444', '#e2e8f0'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // --- STATUS DISTRIBUTION BARS ---
+    function renderStatusBars(data) {
+        const container = document.getElementById('hd-dash-status-bars');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const total = data.totalTickets || 1;
+        const statuses = [
+            { name: 'Open', count: data.openTickets, color: 'bg-red-500', textColor: 'text-red-600' },
+            { name: 'In Progress', count: data.inProgressTickets, color: 'bg-blue-500', textColor: 'text-blue-600' },
+            { name: 'Pending Vendor', count: data.pendingVendor, color: 'bg-yellow-500', textColor: 'text-yellow-600' },
+            { name: 'Resolved', count: data.resolvedTickets, color: 'bg-emerald-500', textColor: 'text-emerald-600' }
+        ];
+
+        statuses.forEach(s => {
+            const pct = Math.round((s.count / total) * 100);
+            container.innerHTML += `
+                <div>
+                    <div class="flex justify-between text-xs font-bold mb-1">
+                        <span class="${s.textColor}">${s.name}</span>
+                        <span class="text-slate-500">${s.count} <span class="text-slate-300 font-normal">(${pct}%)</span></span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="${s.color} h-2 rounded-full transition-all" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    // --- DOWNTIME TABLE ---
+    function renderDowntimeTable(downtimePerLocation) {
+        const tbody = document.getElementById('hd-downtime-body');
+        const emptyMsg = document.getElementById('hd-downtime-empty');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const locations = Object.keys(downtimePerLocation);
+        if (locations.length === 0) {
+            emptyMsg.classList.remove('hidden');
+            return;
+        }
+        emptyMsg.classList.add('hidden');
+
+        locations.forEach(loc => {
+            const d = downtimePerLocation[loc];
+            const totalFormatted = formatMinutes(Math.round(d.totalMinutes));
+            const avgFormatted = d.count > 0 ? formatMinutes(Math.round(d.totalMinutes / d.count)) : '-';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 text-xs font-bold text-slate-700"><i class="fa-solid fa-map-pin text-red-400 mr-1"></i>${loc}</td>
+                    <td class="px-4 py-3 text-center"><span class="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">${d.count}</span></td>
+                    <td class="px-4 py-3 text-right text-xs font-bold text-slate-700">${totalFormatted}</td>
+                    <td class="px-4 py-3 text-right text-xs text-slate-500">${avgFormatted}</td>
+                </tr>`;
+        });
+    }
+
+    // --- SUMMARY TABLE ---
+    function renderSummaryTable(data) {
+        const tbody = document.getElementById('hd-summary-body');
+        if (!tbody) return;
+
+        const metrics = [
+            { name: 'Total Tiket Dibuat', value: data.totalTickets || 0 },
+            { name: 'Tiket Selesai (Resolved + Closed)', value: data.resolvedTickets || 0 },
+            { name: 'Persentase Penyelesaian', value: (data.resolutionRate || 0) + '%', highlight: true },
+            { name: 'SLA Achieved', value: data.slaAchieved || 0 },
+            { name: 'SLA Breached', value: data.slaBreached || 0, danger: true },
+            { name: 'Rata-rata Waktu Respon Awal', value: formatMinutes(data.avgResponseMinutes || 0) },
+            { name: 'Rata-rata Waktu Penyelesaian', value: formatMinutes(data.avgResolveMinutes || 0) },
+            { name: 'Tiket Masih Open', value: (data.openTickets || 0) + (data.inProgressTickets || 0) + (data.pendingVendor || 0) }
+        ];
+
+        tbody.innerHTML = '';
+        metrics.forEach(m => {
+            let valClass = 'text-slate-800 font-bold';
+            if (m.highlight) valClass = 'text-brand-600 font-bold';
+            if (m.danger) valClass = 'text-red-600 font-bold';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 text-xs font-semibold text-slate-600">${m.name}</td>
+                    <td class="px-4 py-3 text-right text-sm ${valClass}">${m.value}</td>
+                </tr>`;
+        });
+    }
+</script>
