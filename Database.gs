@@ -190,3 +190,57 @@ function deleteRow(sheetName, id) {
     lock.releaseLock();
   }
 }
+
+/**
+ * Add multiple rows to Inventory sheet (Optimized for Bulk Import)
+ * Handles UUID generation, timestamping, and duplicate serial filtering
+ */
+function addMultipleRows(sheetName, dataArray) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(sheetName);
+    
+    // Get existing data to check for duplicates (specifically serial numbers)
+    const existingData = sheet.getDataRange().getValues();
+    const headers = existingData[0];
+    const serialIdx = headers.indexOf('serial');
+    
+    let existingSerials = [];
+    if (serialIdx > -1 && existingData.length > 1) {
+      existingSerials = existingData.slice(1).map(row => String(row[serialIdx]).trim().toLowerCase());
+    }
+    
+    let rowsToInsert = [];
+    let skipped = 0;
+    
+    dataArray.forEach(item => {
+      // Validasi duplikasi Serial Number
+      if (item.serial && existingSerials.includes(String(item.serial).trim().toLowerCase())) {
+        skipped++;
+        return; // Skip this row
+      }
+      
+      const newRow = headers.map(header => {
+        if (header === 'id' && !item['id']) return Utilities.getUuid();
+        if (header === 'updatedAt') return new Date();
+        return item[header] || '';
+      });
+      
+      rowsToInsert.push(newRow);
+    });
+    
+    // Bulk insert using setValues for much better performance
+    if (rowsToInsert.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rowsToInsert.length, headers.length).setValues(rowsToInsert);
+    }
+    
+    return { success: true, added: rowsToInsert.length, skipped: skipped };
+  } catch (e) {
+    return { success: false, message: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+

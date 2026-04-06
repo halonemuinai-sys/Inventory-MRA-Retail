@@ -1,0 +1,197 @@
+<script>
+    let bulkImportData = [];
+    const BULK_COLUMNS = [
+        'company', 'brand', 'model', 'type', 'serial', 'status', 'condition',
+        'rentalCost', 'rentalStart', 'rentalEnd', 'processor', 'ram', 'storage', 
+        'os', 'office', 'software', 'rentalRef', 'vendor', 'purchaseDate', 
+        'location', 'deviceCategory', 'purchasePrice'
+    ];
+
+    function initBulkImport() {
+        resetBulkImport();
+    }
+
+    function downloadCSVTemplate() {
+        // Gabungkan array column menjadi header CSV
+        const header = BULK_COLUMNS.join(',');
+        
+        // Buat 1 baris contoh/dummy (opsional) agar user paham formatnya
+        const dummyRow = "Head Office,Lenovo,ThinkPad T14,Beli,SN-12345,Available,Good,,,,i7,16GB,512GB SSD,Windows 11,Office 365,,,,2024-01-01,HO Lantai 3,Laptop,15000000";
+        
+        const csvContent = "data:text/csv;charset=utf-8," + header + "\\n" + dummyRow;
+        const encodedUri = encodeURI(csvContent);
+        
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Template_Impor_Aset.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function handleCSVSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validasi ukuran max 2MB
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Ukuran file terlalu besar! Maksimal 2MB.");
+            resetBulkImport();
+            return;
+        }
+
+        document.getElementById('bulk-file-name').innerText = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            parseCSV(text);
+        };
+        reader.readAsText(file);
+    }
+
+    function parseCSV(csvText) {
+        // Parsing CSV sederhana. Asumsi: tidak ada koma di dalam text (bukan "text, text"). 
+        // Jika file dari Excel menggunakan semi-colon (;), kita perlu mendeteksinya.
+        
+        // Ganti newline return carriage
+        const lines = csvText.replace(/\\r/g, '').split('\\n');
+        if (lines.length < 2) {
+            alert("File CSV kosong atau tidak memiliki data.");
+            return;
+        }
+
+        // Tentukan separator (koma atau titik koma)
+        let separator = ',';
+        if (lines[0].indexOf(';') > -1) {
+            separator = ';';
+        }
+
+        const headers = lines[0].split(separator).map(h => h.trim());
+        
+        // Memastikan header sesuai
+        const isValidTemplate = BULK_COLUMNS.every(col => headers.includes(col));
+        if (!isValidTemplate && headers.length < 5) {
+            // Evaluasi longgar: jika nama kolom beda sama sekali
+            alert("Format kolom CSV tidak sesuai dengan template. Harap download template yang disediakan.");
+            return;
+        }
+
+        bulkImportData = [];
+
+        // Loop dari baris kedua (index 1)
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue; // Skip baris kosong
+
+            // Handle koma di dalam kutip ganda (basic implementation)
+            // Untuk lebih robust, gunakan library, tapi untuk internal tool ini seringkali cukup.
+            let currentRow = lines[i].split(separator);
+            
+            // Build object based on header mapping
+            let obj = {};
+            headers.forEach((header, index) => {
+                if (idx = BULK_COLUMNS.indexOf(header) > -1) {
+                    obj[header] = currentRow[index] ? currentRow[index].trim() : '';
+                }
+            });
+
+            // Hanya masukkan jika serial number dan brand ada
+            if (obj.serial) {
+                // Bersihkan field angka seperti rentalCost dan purchasePrice
+                if (obj.rentalCost) obj.rentalCost = obj.rentalCost.replace(/\\./g, '').replace(/,/g, '');
+                if (obj.purchasePrice) obj.purchasePrice = obj.purchasePrice.replace(/\\./g, '').replace(/,/g, '');
+                
+                bulkImportData.push(obj);
+            }
+        }
+
+        if (bulkImportData.length > 500) {
+            alert(`Terdeteksi ${bulkImportData.length} baris. Mohon batasi maksimal 500 baris per unggahan untuk keandalan eksekusi.`);
+            resetBulkImport();
+            return;
+        }
+
+        if (bulkImportData.length === 0) {
+            alert("TIdak ada data valid yang ditemukan (Pastikan kolom Serial Number terisi).");
+            return;
+        }
+
+        renderBulkPreview(headers);
+    }
+
+    function renderBulkPreview(headers) {
+        document.getElementById('bulk-preview-container').classList.remove('hidden');
+        document.getElementById('bulk-row-count').innerText = `${bulkImportData.length} Baris Valid`;
+        document.getElementById('btn-process-bulk').disabled = false;
+
+        const thead = document.getElementById('bulk-preview-head');
+        const tbody = document.getElementById('bulk-preview-body');
+        
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        // Render Header
+        let trHead = document.createElement('tr');
+        headers.forEach(h => {
+            if (BULK_COLUMNS.includes(h)) {
+                let th = document.createElement('th');
+                th.className = "px-4 py-2 font-bold text-slate-500 uppercase tracking-wider bg-slate-100";
+                th.innerText = h;
+                trHead.appendChild(th);
+            }
+        });
+        thead.appendChild(trHead);
+
+        // Render Baris (Maksimal 10 baris untuk preview)
+        let displayCount = Math.min(bulkImportData.length, 10);
+        for (let i = 0; i < displayCount; i++) {
+            let trData = document.createElement('tr');
+            trData.className = "hover:bg-slate-50";
+            let obj = bulkImportData[i];
+            
+            headers.forEach(h => {
+                if (BULK_COLUMNS.includes(h)) {
+                    let td = document.createElement('td');
+                    td.className = "px-4 py-2 border-slate-100 text-slate-700 font-medium";
+                    td.innerText = obj[h] || '-';
+                    trData.appendChild(td);
+                }
+            });
+            tbody.appendChild(trData);
+        }
+    }
+
+    function resetBulkImport() {
+        bulkImportData = [];
+        document.getElementById('bulk-file-input').value = '';
+        document.getElementById('bulk-file-name').innerText = 'Pilih file CSV atau drag & drop ke sini';
+        document.getElementById('bulk-preview-container').classList.add('hidden');
+        document.getElementById('btn-process-bulk').disabled = true;
+    }
+
+    function processBulkImport() {
+        if (bulkImportData.length === 0) return;
+        if (!confirm(`Anda akan mengimpor ${bulkImportData.length} aset ke database. Lanjutkan?`)) return;
+
+        showLoading(true);
+        const btn = document.getElementById('btn-process-bulk');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...`;
+        btn.disabled = true;
+
+        google.script.run.withSuccessHandler((res) => {
+            showLoading(false);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (res.success) {
+                alert(`Impor Massal Sukses! \\n${res.added} data ditambahkan.\\n${res.skipped} data dilewati (Duplikat Serial Number).`);
+                resetBulkImport();
+                refreshData(); // Sync seluruh data agar tabel update
+                showSection('inventory'); // Kembali ke halaman inventory
+            } else {
+                alert("Error: " + res.message);
+            }
+        }).apiBulkAddInventory(bulkImportData);
+    }
+</script>
