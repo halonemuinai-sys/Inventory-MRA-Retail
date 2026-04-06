@@ -1,0 +1,120 @@
+<!-- ONBOARDING WIZARD VIEW -->
+<section id="onboarding" class="page-section hidden">
+    <div class="flex flex-col gap-6 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-brand-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg overflow-hidden relative">
+            <div class="relative z-10">
+                <h2 class="text-2xl font-bold mb-2">Penyetelan Onboarding Karyawan</h2>
+                <p class="text-white/80 max-w-lg">Cukup isi data di bawah ini untuk menambahkan karyawan baru, mengalokasikan aset, dan otomatis membuat tiket helpdesk untuk penyetelan software.</p>
+            </div>
+            <i class="fa-solid fa-user-plus absolute right-[-20px] bottom-[-20px] text-[180px] text-white/10 rotate-12"></i>
+        </div>
+
+        <!-- Form Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Left Side: Employee & Asset Info -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Section 1: Employee Info -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold">1</div>
+                        <h3 class="font-bold text-slate-800">Biodata Karyawan Baru</h3>
+                    </div>
+                    
+                    <form id="onboarding-form" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Nama Lengkap</label>
+                                <input type="text" id="ob-name" name="name" placeholder="E.g. John Doe" 
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Jabatan / Role</label>
+                                <input type="text" id="ob-role" name="role" placeholder="E.g. Senior Manager" 
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Email Kantor</label>
+                                <input type="email" id="ob-email" name="email" placeholder="john.doe@company.com" 
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Unit Bisnis (PT)</label>
+                                <select id="ob-company" name="company" title="Unit Bisnis" onchange="populateOnboardingAssets()" 
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium" required>
+                                    <option value="" disabled selected>-- Pilih unit --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Departemen</label>
+                                <select id="ob-dept" name="department" title="Departemen"
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium" required>
+                                    <option value="" disabled selected>-- Pilih departemen --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Section 2: Asset Allocation -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center font-bold">2</div>
+                        <h3 class="font-bold text-slate-800">Alokasi Laptop / PC</h3>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Pilih Laptop Tersedia</label>
+                            <select id="ob-asset-id" title="Pilih Laptop" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-medium">
+                                <option value="" disabled selected>-- Pilih laptop --</option>
+                            </select>
+                            <div class="mt-2 text-[10px] text-slate-400 font-medium">Hanya laptop berstatus "Available" yang muncul.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Software Checklist -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 h-full flex flex-col">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">3</div>
+                        <h3 class="font-bold text-slate-800">Checklist Software & Setup</h3>
+                    </div>
+                    
+                    <div id="ob-software-list" class="flex-1 space-y-2 overflow-y-auto max-h-[400px] mb-6">
+                        <div class="p-6 text-center text-slate-400 text-xs italic">Memuat daftar software...</div>
+                    </div>
+
+                    <button type="button" onclick="handleOnboardingSubmit()" id="ob-btn-submit"
+                        class="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-xl shadow-brand-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-3">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Proses Onboarding Sekarang</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Result (Hidden by default) -->
+        <div id="ob-success-msg" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
+                    <i class="fa-solid fa-check-double"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">Onboarding Berhasil!</h3>
+                <p class="text-slate-500 text-sm mb-6">Data karyawan telah masuk, aset teralokasikan, dan tiket Helpdesk telah dibuat otomatis.</p>
+                <div class="space-y-3">
+                    <button onclick="document.getElementById('ob-success-msg').classList.add('hidden'); showSection('helpdesk-list'); loadHelpdeskTickets();" 
+                        class="w-full py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700">Lihat Daftar Tiket</button>
+                    <button onclick="document.getElementById('ob-success-msg').classList.add('hidden'); location.reload();" 
+                        class="w-full py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">Tutup</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>

@@ -108,6 +108,7 @@
             populateYearDropdown('cb-year-select');
             populateYearDropdown('hd-report-year');
             populateCompanySelector();
+            if (typeof initOnboardingForm === 'function') initOnboardingForm();
 
             renderRentalReport();
 
@@ -1459,6 +1460,7 @@
         renderConfigCard('config-office-card', 'Versi MS Office', 'Office', 'fa-file-word', '2019, 365...');
         renderConfigCard('config-company-card', 'Daftar Unit Bisnis (PT)', 'Company', 'fa-building', 'PT Name');
         renderConfigCard('config-dept-card', 'Daftar Departemen', 'Department', 'fa-users-rectangle', 'IT, HR...');
+        renderConfigCard('config-software-card', 'Daftar Software Onboarding', 'Software', 'fa-laptop-code', 'E.g. SAP, Office 365...');
 
         renderUserManagementCard();
 
@@ -1640,12 +1642,17 @@
         if (active) {
             active.classList.add('active');
             const span = active.querySelector('span');
-            if (span) document.getElementById('header-title').innerText = span.innerText;
+            if (span) {
+                const headerTitle = document.getElementById('header-title');
+                if (headerTitle) headerTitle.innerText = span.innerText;
+            }
         }
 
         // Specific Section Logic
         if (id === 'inventory') {
             if (typeof resetAssetForm === 'function') resetAssetForm();
+        } else if (id === 'onboarding') {
+            if (typeof initOnboardingForm === 'function') initOnboardingForm();
         }
     }
     function showLoading(show) { document.getElementById('loading-indicator').classList.toggle('hidden', !show); }

@@ -15,7 +15,7 @@ function setupDatabase() {
   const schemas = {
     'Inventory': ['id', 'company', 'brand', 'model', 'type', 'serial', 'status', 'assignedTo', 'condition', 'rentalCost', 'rentalStart', 'rentalEnd', 'updatedAt', 'processor', 'ram', 'storage', 'os', 'office', 'software', 'rentalRef', 'vendor', 'purchaseDate', 'location', 'deviceCategory', 'purchasePrice'],
     'OtherDevices': ['id', 'company', 'category', 'brand', 'model', 'serial', 'purchaseDate', 'purchasePrice', 'location', 'condition', 'qty', 'updatedAt'],
-    'Employees': ['id', 'company', 'name', 'role', 'department', 'email', 'status', 'assignedAssetId', 'joinDate', 'budget'], 
+    'Employees': ['id', 'company', 'name', 'role', 'department', 'email', 'status', 'assignedAssetId', 'joinDate', 'budget', 'location'], 
     'Users': ['username', 'password', 'name', 'role'], 
     'Tickets': ['id', 'ticketDate', 'reporterId', 'reporterName', 'issueCategory', 'priority', 'subject', 'description', 'assetId', 'assetName', 'status', 'resolution', 'updatedAt'],
     'HelpdeskTickets': ['id', 'reporterName', 'ticketSource', 'ticketDate', 'ticketTime', 'location', 'category', 'issueTitle', 'description', 'priority', 'status', 'responseDate', 'responseTime', 'resolvedDate', 'resolvedTime', 'slaStatus', 'impactLevel', 'updatedAt'],

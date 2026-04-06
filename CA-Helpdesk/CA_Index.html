@@ -1,0 +1,163 @@
+<html lang="id">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bvlgari IT Support</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <?!= include('CA_Style'); ?>
+</head>
+<body class="bg-slate-900 text-white font-['Inter']">
+
+    <!-- Screen: Login (Selection) -->
+    <div id="screen-login" class="screen flex flex-col items-center justify-center min-h-screen p-6">
+        <div class="w-full max-w-sm space-y-8 animate-fade-in">
+            <div class="text-center space-y-2">
+                <div class="w-20 h-20 bg-brand-gradient rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-amber-500/20 mb-4">
+                    <i class="fa-solid fa-headset text-3xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-amber-500">Bvlgari IT Support</h1>
+                <p class="text-slate-400 text-sm">Masuk untuk melaporkan kendala IT.</p>
+            </div>
+
+            <div class="space-y-4 pt-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Pilih Toko / Lokasi</label>
+                    <select id="login-store" onchange="handleStoreChange()" title="Pilih Toko"
+                        class="w-full bg-slate-800 border border-slate-700 text-sm rounded-2xl px-4 py-4 outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Lokasi --</option>
+                        <!-- Options loaded from GAS -->
+                    </select>
+                </div>
+
+                <div id="ca-selection-wrapper" class="hidden animate-slide-up">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Pilih Nama Anda</label>
+                    <select id="login-ca-name" title="Pilih Nama Client Advisor"
+                        class="w-full bg-slate-800 border border-slate-700 text-sm rounded-2xl px-4 py-4 outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/10 transition-all cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Nama --</option>
+                        <!-- Options loaded from GAS -->
+                    </select>
+                </div>
+
+                <button id="btn-login" onclick="handleLogin()" disabled
+                    class="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-slate-900 font-bold py-4 rounded-2xl shadow-xl shadow-amber-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    Masuk ke Dashboard <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen: Dashboard -->
+    <div id="screen-dashboard" class="screen hidden min-h-screen">
+        <!-- Dashboard Header -->
+        <header class="sticky top-0 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-6 py-5 z-20 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                    <i class="fa-solid fa-user-tie text-amber-500"></i>
+                </div>
+                <div>
+                    <h2 id="dash-user-name" class="font-bold text-sm text-white">Name</h2>
+                    <p id="dash-user-store" class="text-[10px] text-slate-400 font-medium">Store Location</p>
+                </div>
+            </div>
+            <button onclick="handleLogout()" title="Logout" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-right-from-bracket text-sm"></i>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="p-6 space-y-6 pb-24">
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-800/50 p-4 rounded-3xl border border-slate-700/50">
+                    <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Tiket Aktif</div>
+                    <div id="stats-open" class="text-2xl font-bold text-amber-500">0</div>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-3xl border border-slate-700/50">
+                    <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Tiket</div>
+                    <div id="stats-total" class="text-2xl font-bold text-white">0</div>
+                </div>
+            </div>
+
+            <!-- List Section -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="font-bold text-slate-300 text-xs uppercase tracking-widest">Riwayat Tiket</h3>
+                    <button onclick="loadCAHistoryData()" title="Refresh Riwayat Tiket" class="text-[10px] text-amber-500 font-bold"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+                </div>
+                
+                <div id="ticket-list" class="space-y-4">
+                    <!-- Tickets loaded here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Action Button -->
+        <button onclick="showScreen('screen-form')" title="Buat Laporan Baru"
+            class="fixed bottom-8 right-6 w-16 h-16 bg-amber-500 rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center transform transition-all active:scale-90 z-30">
+            <i class="fa-solid fa-plus text-2xl text-slate-900"></i>
+        </button>
+    </div>
+
+    <!-- Screen: Form -->
+    <div id="screen-form" class="screen hidden min-h-screen flex flex-col">
+        <header class="px-6 py-5 border-b border-slate-800 flex items-center gap-4">
+            <button onclick="showScreen('screen-dashboard')" title="Kembali ke Dashboard" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <h2 class="font-bold text-lg">Buat Laporan Baru</h2>
+        </header>
+
+        <form id="ticket-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-6 flex-1">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Kategori Masalah</label>
+                    <select id="form-category" required title="Kategori Masalah"
+                        class="w-full bg-slate-800 border border-slate-700 text-sm rounded-2xl px-4 py-4 outline-none focus:border-amber-500/50 transition-all cursor-pointer">
+                        <option value="" disabled selected>-- Pilih Kategori --</option>
+                        <option value="Hardware">Hardware (Komputer/Printer)</option>
+                        <option value="Software">Software (SAP/Office/Retail)</option>
+                        <option value="Network">Network (Internet / WiFi)</option>
+                        <option value="CCTV">CCTV / Keamanan</option>
+                        <option value="Other">Lainnya</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Judul Masalah</label>
+                    <input type="text" id="form-title" placeholder="Misal: Printer tidak muncul..." required
+                        class="w-full bg-slate-800 border border-slate-700 text-sm rounded-2xl px-4 py-4 outline-none focus:border-amber-500/50 transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Deskripsi Detail</label>
+                    <textarea id="form-desc" rows="4" placeholder="Jelaskan kendala Anda..." required
+                        class="w-full bg-slate-800 border border-slate-700 text-sm rounded-2xl px-4 py-4 outline-none focus:border-amber-500/50 transition-all"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-submit"
+                class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-extrabold py-4 rounded-2xl shadow-xl shadow-amber-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Laporan
+            </button>
+        </form>
+    </div>
+
+    <!-- Overlay Loading -->
+    <div id="overlay-loading" class="hidden fixed inset-0 bg-slate-900/90 z-[60] flex flex-col items-center justify-center">
+        <div class="relative w-16 h-16">
+            <div class="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-t-amber-500 rounded-full animate-spin"></div>
+        </div>
+        <p class="text-slate-400 text-sm mt-6 font-medium animate-pulse" id="loading-text">Sedang memproses...</p>
+    </div>
+
+    <?!= include('CA_JS'); ?>
+</body>
+</html>

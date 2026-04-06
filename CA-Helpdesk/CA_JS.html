@@ -1,0 +1,179 @@
+<script>
+    /**
+     * JS.HTML (CA-Helpdesk)
+     */
+    
+    let currentCA = JSON.parse(localStorage.getItem('ca_user')) || null;
+    
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (currentCA) {
+            initDashboard();
+        } else {
+            initLogin();
+        }
+    });
+
+    /* --- ROUTER --- */
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function showLoading(show, text = 'Sedang memproses...') {
+        const overlay = document.getElementById('overlay-loading');
+        const textEl = document.getElementById('loading-text');
+        textEl.innerText = text;
+        overlay.classList.toggle('hidden', !show);
+    }
+
+    /* --- LOGIN LOGIC --- */
+    function initLogin() {
+        showScreen('screen-login');
+        showLoading(true, 'Memuat daftar toko...');
+        google.script.run.withSuccessHandler(stores => {
+            showLoading(false);
+            const sel = document.getElementById('login-store');
+            sel.innerHTML = '<option value="" disabled selected>-- Pilih Lokasi --</option>';
+            stores.forEach(s => {
+                sel.innerHTML += `<option value="${s}">${s}</option>`;
+            });
+        }).getStores();
+    }
+
+    function handleStoreChange() {
+        const store = document.getElementById('login-store').value;
+        const caWrapper = document.getElementById('ca-selection-wrapper');
+        const caSel = document.getElementById('login-ca-name');
+        const btn = document.getElementById('btn-login');
+
+        if (!store) return;
+
+        showLoading(true, 'Memuat nama advisor...');
+        google.script.run.withSuccessHandler(cas => {
+            showLoading(false);
+            caWrapper.classList.remove('hidden');
+            caSel.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+            if (cas.length === 0) {
+                alert("Tidak ada Client Advisor terdaftar di lokasi ini.");
+                return;
+            }
+            cas.forEach(ca => {
+                caSel.innerHTML += `<option value="${ca.name}">${ca.name}</option>`;
+            });
+            btn.disabled = false;
+        }).getCAsByLocation(store);
+    }
+
+    function handleLogin() {
+        const store = document.getElementById('login-store').value;
+        const name = document.getElementById('login-ca-name').value;
+        
+        if (!store || !name) {
+            alert("Mohon pilih Lokasi dan Nama Anda.");
+            return;
+        }
+
+        currentCA = { name, store };
+        localStorage.setItem('ca_user', JSON.stringify(currentCA));
+        initDashboard();
+    }
+
+    function handleLogout() {
+        if (!confirm("Logout dari aplikasi?")) return;
+        localStorage.removeItem('ca_user');
+        currentCA = null;
+        initLogin();
+    }
+
+    /* --- DASHBOARD LOGIC --- */
+    function initDashboard() {
+        showScreen('screen-dashboard');
+        document.getElementById('dash-user-name').innerText = currentCA.name;
+        document.getElementById('dash-user-store').innerText = currentCA.store;
+        loadCAHistoryData();
+    }
+
+    function loadCAHistoryData() {
+        const list = document.getElementById('ticket-list');
+        list.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-slate-500 animate-pulse">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-4"></i>
+                <p class="text-xs">Memuat riwayat tiket...</p>
+            </div>`;
+
+        google.script.run.withSuccessHandler(tickets => {
+            renderTickets(tickets);
+        }).getCAHistory(currentCA.name);
+    }
+
+    function renderTickets(tickets) {
+        const list = document.getElementById('ticket-list');
+        const openEl = document.getElementById('stats-open');
+        const totalEl = document.getElementById('stats-total');
+
+        totalEl.innerText = tickets.length;
+        openEl.innerText = tickets.filter(t => t.status === 'Open' || t.status === 'In Progress').length;
+
+        if (tickets.length === 0) {
+            list.innerHTML = `
+                <div class="bg-slate-800/20 border border-slate-700/50 border-dashed rounded-3xl p-12 text-center">
+                    <i class="fa-regular fa-folder-open text-3xl text-slate-700 mb-4"></i>
+                    <p class="text-sm text-slate-500 font-medium">Belum ada laporan.</p>
+                    <p class="text-[10px] text-slate-600 mt-2">Ketuk tombol + untuk melaporkan kendala IT.</p>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = '';
+        tickets.forEach(t => {
+            const statusColor = t.status === 'Resolved' || t.status === 'Closed' ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+            const statusIcon = t.status === 'Resolved' || t.status === 'Closed' ? 'fa-check-circle' : 'fa-clock';
+            
+            list.innerHTML += `
+                <div class="ticket-card bg-slate-800/80 border border-slate-700/50 rounded-3xl p-5 space-y-3">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-mono font-bold text-slate-500 tracking-wider">#${t.id ? t.id.substring(3, 11) : 'CA'} • ${t.date}</span>
+                        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full border ${statusColor} text-[9px] font-extrabold uppercase tracking-widest">
+                            <i class="fa-solid ${statusIcon}"></i> ${t.status}
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-100">${t.title}</h4>
+                        <p class="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">${t.description}</p>
+                    </div>
+                    <div class="flex items-center gap-2 pt-2 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-layer-group text-slate-600"></i> ${t.category}
+                    </div>
+                </div>`;
+        });
+    }
+
+    /* --- FORM LOGIC --- */
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        const payload = {
+            caName: currentCA.name,
+            location: currentCA.store,
+            category: document.getElementById('form-category').value,
+            title: document.getElementById('form-title').value,
+            description: document.getElementById('form-desc').value
+        };
+
+        if (!payload.category || !payload.title || !payload.description) return;
+
+        showLoading(true, 'Mengirim laporan...');
+        google.script.run.withSuccessHandler(res => {
+            showLoading(false);
+            if (res.success) {
+                alert("✅ Laporan berhasil terkirim!");
+                document.getElementById('ticket-form').reset();
+                initDashboard();
+            } else {
+                alert("❌ Gagal mengirim: " + res.message);
+            }
+        }).submitCATicket(payload);
+    }
+
+</script>

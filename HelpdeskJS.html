@@ -173,11 +173,15 @@
         }).apiAddHelpdeskTicket(ticketData);
     }
 
+    helpdeskFilterStatus = 'all';
+    let helpdeskDisplayLimit = 50;
+
     // --- LOAD TICKETS ---
     function loadHelpdeskTickets() {
         const tbody = document.getElementById('hd-table-body');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="text-center py-10 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i> Memuat...</td></tr>';
-
+        if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="text-center py-10 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i> Memuat...</td></tr>';
+        
+        helpdeskDisplayLimit = 50; // Reset limit on reload
         google.script.run.withSuccessHandler(tickets => {
             helpdeskTickets = tickets || [];
             renderHelpdeskList();
@@ -189,6 +193,8 @@
     function renderHelpdeskList() {
         const tbody = document.getElementById('hd-table-body');
         const emptyMsg = document.getElementById('hd-list-empty');
+        const loadMoreContainer = document.getElementById('hd-load-more-container');
+
         if (!tbody) return;
 
         // Count per status
@@ -212,15 +218,29 @@
             filtered = helpdeskTickets.filter(t => t.status === helpdeskFilterStatus);
         }
 
+        const totalFilteredCount = filtered.length;
+        const displayTickets = filtered.slice(0, helpdeskDisplayLimit);
+
         tbody.innerHTML = '';
 
-        if (filtered.length === 0) {
+        if (totalFilteredCount === 0) {
             emptyMsg.classList.remove('hidden');
+            if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
             return;
         }
         emptyMsg.classList.add('hidden');
 
-        filtered.forEach(t => {
+        // Show/Hide Load More Button
+        if (loadMoreContainer) {
+            if (totalFilteredCount > helpdeskDisplayLimit) {
+                loadMoreContainer.classList.remove('hidden');
+                document.getElementById('hd-showing-count').innerText = `Menampilkan ${displayTickets.length} dari ${totalFilteredCount} tiket`;
+            } else {
+                loadMoreContainer.classList.add('hidden');
+            }
+        }
+
+        displayTickets.forEach(t => {
             // Priority badge
             let priBadge = '';
             if (t.priority === 'High') priBadge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold border border-red-200">High</span>';
@@ -277,9 +297,15 @@
         });
     }
 
+    function loadMoreHelpdeskTickets() {
+        helpdeskDisplayLimit += 50;
+        renderHelpdeskList();
+    }
+
     // --- FILTER ---
     function filterHelpdeskByStatus(status) {
         helpdeskFilterStatus = status;
+        helpdeskDisplayLimit = 50; // Reset limit on filter change
 
         // Update button styles
         document.querySelectorAll('.hd-filter-btn').forEach(btn => {

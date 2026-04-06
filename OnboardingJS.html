@@ -1,0 +1,161 @@
+<script>
+    /**
+     * --- ONBOARDING MODULE JS ---
+     * Handles employee creation, asset assignment, and automatic helpdesk ticket generation.
+     */
+
+    function initOnboardingForm() {
+        // 1. Populate Company Select
+        const compSel = document.getElementById('ob-company');
+        if (compSel) {
+            const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company)]);
+            compSel.innerHTML = '<option value="" disabled selected>-- Pilih unit --</option>';
+            companies.forEach(c => {
+                if (c) {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    compSel.appendChild(opt);
+                }
+            });
+            
+            // Default to active company if not Global
+            if (activeCompany !== 'Global') {
+                compSel.value = activeCompany;
+                populateOnboardingAssets();
+            }
+        }
+
+        // 2. Populate Department Select
+        const deptSel = document.getElementById('ob-dept');
+        if (deptSel) {
+            deptSel.innerHTML = '<option value="" disabled selected>-- Pilih departemen --</option>';
+            masterData.filter(m => m.category === 'Department').forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.value;
+                opt.textContent = m.value;
+                deptSel.appendChild(opt);
+            });
+        }
+
+        // 3. Populate Software Checklist
+        const swContainer = document.getElementById('ob-software-list');
+        if (swContainer) {
+            const softwares = masterData.filter(m => m.category === 'Software');
+            if (softwares.length === 0) {
+                swContainer.innerHTML = `
+                    <div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                        <i class="fa-solid fa-layer-group text-slate-300 text-3xl mb-3 block"></i>
+                        <p class="text-xs text-slate-500 font-medium mb-1">Daftar software belum diatur.</p>
+                        <p class="text-[10px] text-slate-400">Atur di menu Konfigurasi > Daftar Software</p>
+                    </div>
+                `;
+            } else {
+                swContainer.innerHTML = '';
+                softwares.forEach(sw => {
+                    const label = document.createElement('label');
+                    label.className = 'software-item block p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-300 transition-all cursor-pointer';
+                    label.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" class="ob-sw-check rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" value="${sw.value}" checked>
+                            <span class="text-sm font-semibold text-slate-700">${sw.value}</span>
+                        </div>
+                    `;
+                    swContainer.appendChild(label);
+                });
+            }
+        }
+    }
+
+    function populateOnboardingAssets() {
+        const company = document.getElementById('ob-company').value;
+        const assetSel = document.getElementById('ob-asset-id');
+        if (!assetSel) return;
+
+        assetSel.innerHTML = '<option value="" disabled selected>-- Pilih laptop --</option>';
+        if (!company) {
+            assetSel.innerHTML += '<option value="" disabled>Pilih Unit Bisnis terlebih dahulu</option>';
+            return;
+        }
+
+        const available = inventoryData.filter(i => 
+            i.status === 'Available' && 
+            i.company === company && 
+            (!i.deviceCategory || i.deviceCategory === '' || i.deviceCategory === 'PC/Laptop')
+        );
+
+        if (available.length === 0) {
+            assetSel.innerHTML += '<option value="" disabled>Tidak ada laptop tersedia di unit ini.</option>';
+        } else {
+            available.forEach(i => {
+                const opt = document.createElement('option');
+                opt.value = i.id;
+                opt.textContent = `${i.brand} ${i.model} (${i.serial})`;
+                assetSel.appendChild(opt);
+            });
+        }
+    }
+
+    function handleOnboardingSubmit() {
+        const btn = document.getElementById('ob-btn-submit');
+        const originalBtnContent = btn.innerHTML;
+
+        // Collect Form Data
+        const name = document.getElementById('ob-name').value;
+        const role = document.getElementById('ob-role').value;
+        const company = document.getElementById('ob-company').value;
+        const department = document.getElementById('ob-dept').value;
+        const email = document.getElementById('ob-email').value;
+        const assetId = document.getElementById('ob-asset-id').value;
+
+        if (!name || !role || !company || !department) {
+            alert("Mohon lengkapi data Karyawan (Nama, Role, PT, Departemen).");
+            return;
+        }
+
+        // Get Software Checklist
+        const swChecks = document.querySelectorAll('.ob-sw-check:checked');
+        const softwareList = Array.from(swChecks).map(cb => cb.value);
+        
+        if (confirm(`Proses onboarding untuk ${name}?\nSistem akan membuat tiket Helpdesk otomatis.`)) {
+            showLoading(true);
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...';
+
+            const payload = {
+                employee: {
+                    name,
+                    role,
+                    company,
+                    department,
+                    email,
+                    assignedAssetId: assetId
+                },
+                assetId: assetId,
+                software: softwareList,
+                onboardedBy: currentUser ? currentUser.name : 'System Admin'
+            };
+
+            google.script.run.withSuccessHandler(res => {
+                showLoading(false);
+                btn.disabled = false;
+                btn.innerHTML = originalBtnContent;
+
+                if (res.success) {
+                    // Reset Form
+                    document.getElementById('onboarding-form').reset();
+                    document.getElementById('ob-asset-id').value = '';
+                    
+                    // Show Success Modal
+                    document.getElementById('ob-success-msg').classList.remove('hidden');
+                    
+                    // Refresh Global Data
+                    if (typeof refreshData === 'function') refreshData();
+                } else {
+                    alert("❌ Gagal Onboarding: " + (res.message || 'Unknown error'));
+                }
+            }).apiOnboardEmployee(payload);
+        }
+    }
+
+</script>

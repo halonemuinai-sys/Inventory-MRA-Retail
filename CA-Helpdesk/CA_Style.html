@@ -1,0 +1,77 @@
+<style>
+    :root {
+        --amber-500: #f59e0b;
+        --amber-600: #d97706;
+        --slate-900: #0f172a;
+        --slate-800: #1e293b;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
+    }
+
+    .bg-brand-gradient {
+        background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    input, select, textarea {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 10px;
+    }
+
+    select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 1rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+    }
+
+    .screen {
+        transition: opacity 0.3s ease;
+    }
+
+    /* Screen Transitions */
+    .screen.hidden {
+        display: none;
+        opacity: 0;
+    }
+
+    .ticket-card {
+        transition: all 0.2s ease;
+    }
+    .ticket-card:active {
+        transform: scale(0.98);
+        background-color: #1e293b;
+    }
+</style>
