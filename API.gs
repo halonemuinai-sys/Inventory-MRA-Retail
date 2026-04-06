@@ -17,7 +17,8 @@
       users: apiGetUsers(), // Reuse safe user fetch
       costAnalysis: calculateCostAnalysis(year),
       gisLocations: getGISLocationNames(),
-      helpdeskTickets: getData('HelpdeskTickets')
+      helpdeskTickets: getData('HelpdeskTickets'),
+      saas: getData('SaaS_Licenses')
     };
   }
 
@@ -39,6 +40,36 @@
 
   function apiDeleteOtherDevice(id) {
     return deleteRow('OtherDevices', id);
+  }
+
+  // --- SaaS APIs ---
+  // --- SaaS APIs ---
+  function apiAddSaaS(data) {
+    const historyLog = data.newHistoryLog;
+    delete data.newHistoryLog; // Remove from SaaS row payload
+    
+    // Auto-generate ID if missing to use in history
+    if (!data.id) data.id = Utilities.getUuid();
+    
+    const res = addRow('SaaS_Licenses', data);
+    if (res.success && historyLog) {
+      addRow('AssetHistory', { assetId: data.id, action: 'SaaS Registered', notes: historyLog, date: new Date(), empName: 'System / Admin' });
+    }
+    return res;
+  }
+  
+  function apiUpdateSaaS(data) {
+    const historyLog = data.newHistoryLog;
+    delete data.newHistoryLog;
+    
+    const res = updateRow('SaaS_Licenses', data.id, data);
+    if (res.success && historyLog) {
+       addRow('AssetHistory', { assetId: data.id, action: 'SaaS Renewed / Updated', notes: historyLog, date: new Date(), empName: 'System / Admin' });
+    }
+    return res;
+  }
+  function apiDeleteSaaS(id) {
+    return deleteRow('SaaS_Licenses', id);
   }
 
   function apiGetEmployees() { 

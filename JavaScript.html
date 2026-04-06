@@ -23,6 +23,7 @@
                 document.getElementById('login-container').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
                 updateSidebarUser();
+                applyPermissions(currentUser.role);
                 refreshData();
             } catch (e) {
                 console.error("Auth Error", e);
@@ -51,6 +52,7 @@
                 document.getElementById('app-container').classList.remove('hidden');
 
                 updateSidebarUser();
+                applyPermissions(currentUser.role);
                 refreshData();
             } else {
                 err.innerText = res.message;
@@ -83,6 +85,50 @@
         document.getElementById('sidebar-user-initial').innerText = currentUser.name.charAt(0).toUpperCase();
     }
 
+    function applyPermissions(role) {
+        const _id = (id) => document.getElementById(id);
+        const hide = (id) => { if (_id(id)) _id(id).classList.add('hidden'); };
+        const show = (id) => { if (_id(id)) _id(id).classList.remove('hidden'); };
+
+        // 1. Tampilkan semua default (agar bersih saat pindah akun)
+        const allElements = [
+            'nav-bulk-import', 'nav-employees', 'nav-budgeting', 'nav-company-budget-view', 
+            'nav-cost', 'nav-config', 'head-admin', 'head-legacy-helpdesk', 'nav-ticket-support',
+            'nav-ticket-summary', 'head-it-helpdesk', 'nav-helpdesk-input', 'nav-helpdesk-list',
+            'nav-helpdesk-dashboard', 'nav-helpdesk-report', 'nav-saas'
+        ];
+        allElements.forEach(show);
+
+        const r = (role || '').toUpperCase().trim();
+
+        // 2. Sembunyikan sesuai peran
+        if (r === 'IT SUPPORT') {
+            hide('nav-bulk-import');
+            hide('nav-employees');
+            hide('nav-budgeting');
+            hide('nav-company-budget-view');
+            hide('head-admin');
+            hide('nav-config');
+            hide('nav-saas');
+        } else if (r === 'DATA ENTRY') {
+            hide('head-legacy-helpdesk');
+            hide('nav-ticket-support');
+            hide('nav-ticket-summary');
+            hide('head-it-helpdesk');
+            hide('nav-helpdesk-input');
+            hide('nav-helpdesk-list');
+            hide('nav-helpdesk-dashboard');
+            hide('nav-helpdesk-report');
+            hide('nav-budgeting');
+            hide('nav-company-budget-view');
+            hide('nav-cost');
+            hide('nav-cost');
+            hide('head-admin');
+            hide('nav-config');
+            hide('nav-saas');
+        }
+    }
+
     function refreshData() {
         showLoading(true);
         google.script.run.withSuccessHandler(data => {
@@ -94,6 +140,7 @@
             employeeData = data.employees;
             configData = data.config;
             costAnalysisData = data.costAnalysis;
+            window.saasData = data.saas || [];
             gisLocations = data.gisLocations || [];
             if (typeof initGISLogic === 'function') initGISLogic(gisLocations);
 
@@ -133,6 +180,7 @@
                 if (typeof initHelpdeskForm === 'function') initHelpdeskForm();
                 if (typeof populateHelpdeskDropdowns === 'function') populateHelpdeskDropdowns();
             }
+            if (typeof initSaaS === 'function') initSaaS();
 
             showLoading(false);
         }).apiGetAllData(selectedGlobalYear);
@@ -298,6 +346,14 @@
         document.getElementById('dash-available').innerText = inv.filter(i => i.status === 'Available').length;
         document.getElementById('dash-tickets').innerText = "0";
 
+        // Calculate New Laptops Rented in Selected Year
+        const newLaptopSewa = inv.filter(i => {
+           if(i.type !== 'Sewa' || (i.deviceCategory || '').toLowerCase() !== 'laptop' || !i.rentalStart) return false;
+           return new Date(i.rentalStart).getFullYear() === selectedGlobalYear;
+        }).length;
+        const elNewSewa = document.getElementById('dash-new-laptop-sewa');
+        if (elNewSewa) elNewSewa.innerText = newLaptopSewa;
+
         // Calculate YTD Cost from costAnalysisData (match with cost analysis page)
         let totalVal = 0;
         Object.keys(costAnalysisData).forEach(comp => {
@@ -337,6 +393,26 @@
                 }
             }
         });
+        // Count and collect SaaS warnings
+        const saas = window.saasData || [];
+        saas.forEach(item => {
+            if (item.expiryDate && item.status !== 'Cancelled') {
+                const endDate = new Date(item.expiryDate);
+                const diffTime = endDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 30) {
+                    hasWarning = true;
+                    warningCount++;
+                    warningItems.push({
+                        item: { id: item.id, brand: item.category, model: item.name, serial: item.vendor, isSaaS: true },
+                        diffDays: diffDays,
+                        empName: 'SaaS / System',
+                        budgetFormatted: 'Rp ' + (parseFloat(item.cost) || 0).toLocaleString('id-ID')
+                    });
+                }
+            }
+        });
 
         // Update Sidebar Badge
         const badge = document.getElementById('sidebar-warning-badge');
@@ -372,8 +448,10 @@
                 const urgencyBorder = diffDays <= 7 ? 'border-red-500' : (diffDays <= 14 ? 'border-orange-500' : 'border-yellow-500');
                 const urgencyText = diffDays <= 7 ? 'text-red-700' : (diffDays <= 14 ? 'text-orange-700' : 'text-yellow-700');
 
+                const onClickAction = item.isSaaS ? `showSection('saas-management'); editSaaS('${item.id}');` : `showSection('inventory'); editInventoryItem('${item.id}');`;
+
                 warningList.innerHTML += `
-                        <div class="min-w-[280px] bg-white border border-slate-100 border-l-4 ${urgencyBorder} rounded-xl p-4 shadow-sm relative flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="showSection('inventory'); editInventoryItem('${item.id}');">
+                        <div class="min-w-[280px] bg-white border border-slate-100 border-l-4 ${urgencyBorder} rounded-xl p-4 shadow-sm relative flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="${onClickAction}">
                              <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <h4 class="font-bold text-slate-800 text-sm truncate max-w-[150px] group-hover:text-brand-600" title="${item.brand} ${item.model}">${item.brand} ${item.model} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1 opacity-0 group-hover:opacity-100"></i></h4>
@@ -1533,8 +1611,10 @@
                         </div>
                         <div class="md:col-span-2">
                             <select name="role" class="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-brand-500 bg-white">
-                                <option value="user">User (View)</option>
-                                <option value="admin">Admin (Full)</option>
+                                <option value="admin">Admin (Full Access)</option>
+                                <option value="IT SUPPORT">IT Support</option>
+                                <option value="DATA ENTRY">Data Entry</option>
+                                <option value="user">User (View Only)</option>
                             </select>
                         </div>
                          <div class="md:col-span-1">

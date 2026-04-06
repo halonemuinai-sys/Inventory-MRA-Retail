@@ -1,0 +1,290 @@
+<script>
+    let activeSaaSFilter = 'All';
+
+    function initSaaS() {
+        populateSaaSCategories();
+        renderSaaSTable();
+        updateSaaSStats();
+    }
+
+    function filterSaaS(category) {
+        activeSaaSFilter = category;
+        renderSaaSTable();
+        updateSaaSStats();
+    }
+
+    const FIXED_SAAS_CATEGORIES = [
+        'Software / SaaS',
+        'Hosting',
+        'Network & Internet',
+        'Hardware Maintenance / Support',
+        'Communication Tools',
+        'Marketing / Digital Tools'
+    ];
+
+    function populateSaaSCategories() {
+        const sel = document.getElementById('saas-category');
+        if (!sel) return;
+        
+        sel.innerHTML = '<option value="" disabled selected>-- Pilih Kategori --</option>';
+        FIXED_SAAS_CATEGORIES.forEach(c => {
+            sel.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+
+    function updateSaaSStats() {
+        const saas = window.saasData || [];
+        const container = document.getElementById('saas-stats-container');
+        if (!container) return;
+
+        const colorMap = [
+            { bg: 'bg-indigo-50', text: 'text-indigo-500', textBold: 'text-indigo-800', border: 'border-indigo-100', hover: 'hover:bg-indigo-100' },
+            { bg: 'bg-teal-50', text: 'text-teal-500', textBold: 'text-teal-800', border: 'border-teal-100', hover: 'hover:bg-teal-100' },
+            { bg: 'bg-orange-50', text: 'text-orange-500', textBold: 'text-orange-800', border: 'border-orange-100', hover: 'hover:bg-orange-100' },
+            { bg: 'bg-blue-50', text: 'text-blue-500', textBold: 'text-blue-800', border: 'border-blue-100', hover: 'hover:bg-blue-100' },
+            { bg: 'bg-rose-50', text: 'text-rose-500', textBold: 'text-rose-800', border: 'border-rose-100', hover: 'hover:bg-rose-100' },
+            { bg: 'bg-emerald-50', text: 'text-emerald-500', textBold: 'text-emerald-800', border: 'border-emerald-100', hover: 'hover:bg-emerald-100' }
+        ];
+
+        let html = `
+            <div class="${activeSaaSFilter === 'All' ? 'bg-slate-100 border-slate-300' : 'bg-white border-slate-100'} p-4 rounded-xl border shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onclick="filterSaaS('All')">
+                <p class="text-xs text-slate-500 font-semibold mb-1">Total Layanan</p>
+                <h3 class="text-xl font-bold text-slate-800">${saas.length}</h3>
+            </div>
+        `;
+
+        FIXED_SAAS_CATEGORIES.forEach((cat, idx) => {
+            const count = saas.filter(s => s.category === cat).length;
+            const c = colorMap[idx % colorMap.length];
+            const isActive = activeSaaSFilter === cat;
+            const activeBg = isActive ? c.hover : c.bg;
+            const activeBorder = isActive ? c.text : c.border; // Highlight border if active
+
+            html += `
+                <div class="${activeBg} p-4 rounded-xl border ${activeBorder} shadow-sm cursor-pointer ${c.hover} transition-colors group" onclick="filterSaaS('${cat}')">
+                    <p class="text-xs ${c.text} font-semibold mb-1 truncate" title="${cat}">${cat}</p>
+                    <h3 class="text-xl font-bold ${c.textBold} group-hover:scale-105 transition-transform origin-left">${count}</h3>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function renderSaaSTable() {
+        const tbody = document.getElementById('saas-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const saas = window.saasData || [];
+        const searchQuery = (document.getElementById('saas-search')?.value || '').toLowerCase();
+
+        let filtered = saas.filter(s => {
+            if (activeSaaSFilter !== 'All' && s.category !== activeSaaSFilter) return false;
+            if (searchQuery) {
+                const searchStr = `${s.name} ${s.vendor} ${s.category} ${s.notes}`.toLowerCase();
+                if (!searchStr.includes(searchQuery)) return false;
+            }
+            return true;
+        });
+
+        // Sort by expiry date (closest first)
+        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500 font-semibold bg-slate-50/50">Tidak ada data ditemukan.</td></tr>`;
+            return;
+        }
+
+        const today = new Date();
+
+        filtered.forEach(s => {
+            const costParsed = parseFloat(s.cost) || 0;
+            const costFmt = 'Rp ' + costParsed.toLocaleString('id-ID');
+            
+            const expDate = new Date(s.expiryDate);
+            const diffTime = expDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let statusBadge = '';
+            if (s.status === 'Cancelled') {
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500">Cancelled</span>';
+            } else if (diffDays < 0) {
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 border border-red-200">Expired</span>';
+            } else if (diffDays <= 30) {
+                statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-600 border border-orange-200 animate-pulse">Renewal dalam ${diffDays} Hari</span>`;
+            } else {
+                statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600">Active</span>';
+            }
+
+            const colorMap = [
+                { bg: 'bg-indigo-50', text: 'text-indigo-500', icon: 'fa-layer-group' },
+                { bg: 'bg-teal-50', text: 'text-teal-500', icon: 'fa-globe' },
+                { bg: 'bg-orange-50', text: 'text-orange-500', icon: 'fa-server' },
+                { bg: 'bg-blue-50', text: 'text-blue-500', icon: 'fa-cloud' },
+                { bg: 'bg-rose-50', text: 'text-rose-500', icon: 'fa-headset' },
+                { bg: 'bg-emerald-50', text: 'text-emerald-500', icon: 'fa-bullhorn' }
+            ];
+
+            let catIdx = FIXED_SAAS_CATEGORIES.indexOf(s.category);
+            if (catIdx === -1) catIdx = 0; // Default if not found
+            let cMap = colorMap[catIdx % colorMap.length];
+            
+            let catIcon = cMap.icon + ' ' + cMap.text;
+            let catBg = cMap.bg;
+
+            let evidenceBadge = '';
+            if (s.evidenceLink) {
+                evidenceBadge = '<a href="' + s.evidenceLink + '" target="_blank" title="Lihat Evidence" class="ml-1 text-blue-500 hover:text-blue-700"><i class="fa-solid fa-link text-[10px]"></i></a>';
+            }
+
+            let notesBadge = '';
+            if (s.notes) {
+                notesBadge = '<div class="text-[10px] text-slate-400 mt-0.5 italic max-w-[200px] truncate" title="' + s.notes + '">' + s.notes + '</div>';
+            }
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition-colors group">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 ${catBg} rounded-lg flex items-center justify-center shrink-0">
+                                <i class="fa-solid ${catIcon}"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm group-hover:text-brand-600 transition-colors">${s.name} ${evidenceBadge}</div>
+                                <div class="text-[10px] text-slate-500 font-medium">${s.vendor}</div>
+                                ${notesBadge}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="text-xs font-semibold text-slate-600">${s.category}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="text-sm font-bold text-slate-700">${costFmt}</div>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">${s.billingCycle}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="mb-1">${statusBadge}</div>
+                        <div class="text-[10px] text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(s.expiryDate).toLocaleDateString('id-ID')}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editSaaS('${s.id}')" title="Edit" class="w-8 h-8 rounded bg-slate-100 text-slate-500 hover:bg-brand-50 hover:text-brand-600 transition-colors flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="deleteSaaS('${s.id}')" title="Hapus" class="w-8 h-8 rounded bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center justify-center"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function formatSaaSCost(el) {
+        let val = el.value.replace(/\D/g, "");
+        if (val) {
+            el.value = parseInt(val).toLocaleString('id-ID');
+        } else {
+            el.value = "";
+        }
+    }
+
+    function openSaaSModal() {
+        document.getElementById('saas-form').reset();
+        document.getElementById('saas-id').value = '';
+        document.getElementById('saas-modal-title').innerText = 'Tambah Layanan Baru';
+        document.getElementById('saas-history-wrapper').classList.add('hidden');
+        
+        // Auto-set start date to today, expiry to 1 year later as default UX
+        const today = new Date();
+        document.getElementById('saas-start-date').value = today.toISOString().split('T')[0];
+        
+        const nextYear = new Date();
+        nextYear.setFullYear(today.getFullYear() + 1);
+        document.getElementById('saas-expiry-date').value = nextYear.toISOString().split('T')[0];
+
+        document.getElementById('saas-modal').classList.remove('hidden');
+        document.getElementById('saas-modal').classList.add('flex');
+    }
+
+    function closeSaaSModal() {
+        document.getElementById('saas-modal').classList.add('hidden');
+        document.getElementById('saas-modal').classList.remove('flex');
+    }
+
+    function handleSaveSaaS(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-saas');
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...';
+        btn.disabled = true;
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        // Clean cost (remove dots)
+        if (data.cost) {
+            data.cost = data.cost.replace(/\./g, "");
+        }
+
+        const isUpdate = !!data.id;
+        
+        const apiCall = isUpdate ? 'apiUpdateSaaS' : 'apiAddSaaS';
+
+        google.script.run.withSuccessHandler(res => {
+            btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan';
+            btn.disabled = false;
+            if (res.success) {
+                closeSaaSModal();
+                refreshData(); // Refresh all to update dashboard stats too
+            } else {
+                alert("Gagal menyimpan server: " + res.message);
+            }
+        })[apiCall](data);
+    }
+
+    function editSaaS(id) {
+        const saas = (window.saasData || []).find(s => s.id === id);
+        if (!saas) return;
+
+        document.getElementById('saas-id').value = saas.id;
+        document.getElementById('saas-category').value = saas.category;
+        document.getElementById('saas-vendor').value = saas.vendor;
+        document.getElementById('saas-name').value = saas.name;
+        document.getElementById('saas-billing-cycle').value = saas.billingCycle;
+        
+        const costInput = document.getElementById('saas-cost');
+        costInput.value = saas.cost || "";
+        formatSaaSCost(costInput);
+        
+        if (saas.startDate) document.getElementById('saas-start-date').value = new Date(saas.startDate).toISOString().split('T')[0];
+        if (saas.expiryDate) document.getElementById('saas-expiry-date').value = new Date(saas.expiryDate).toISOString().split('T')[0];
+        
+        document.getElementById('saas-status').value = saas.status || 'Active';
+        document.getElementById('saas-notes').value = saas.notes || '';
+        document.getElementById('saas-evidence-link').value = saas.evidenceLink || '';
+
+        document.getElementById('saas-history-wrapper').classList.remove('hidden');
+        if (typeof renderAssetHistory === 'function') {
+            renderAssetHistory(id, 'saas-history-container');
+        }
+
+        document.getElementById('saas-modal-title').innerText = 'Edit Layanan';
+        document.getElementById('saas-modal').classList.remove('hidden');
+        document.getElementById('saas-modal').classList.add('flex');
+    }
+
+    function deleteSaaS(id) {
+        if (!confirm("Hapus data layanan ini secara permanen?")) return;
+        
+        showLoading(true);
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                refreshData();
+            } else {
+                showLoading(false);
+                alert("Gagal menghapus: " + res.message);
+            }
+        }).apiDeleteSaaS(id);
+    }
+</script>

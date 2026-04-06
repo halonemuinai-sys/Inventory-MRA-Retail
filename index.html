@@ -64,11 +64,21 @@
         <!-- RENTAL SPECIFICATION VIEW -->
         <?!= include('RentalSpec'); ?>
 
+        <!-- SAAS MANAGEMENT VIEW -->
+        <?!= include('SaaSManagement'); ?>
+
         <!-- CONFIGURATION & OTHERS -->
         <?!= include('Configuration'); ?>
 
         <!-- GIS VIEW (Integrated) -->
         <?!= include('Map'); ?>
+
+        <!-- MAIN FOOTER -->
+        <footer class="mt-12 mb-6 text-center">
+            <div class="text-[10px] text-slate-400 font-medium tracking-wide">
+                © 2026 Asset & Lease Management System | <span class="text-brand-600">Created By Aris Setiyono</span>
+            </div>
+        </footer>
 
       </div>
     </main>
@@ -86,6 +96,7 @@
   <?!= include('HelpdeskJS'); ?>
   <?!= include('OnboardingJS'); ?>
   <?!= include('BulkImportJS'); ?>
+  <?!= include('SaaSJS'); ?>
 </body>
 
 </html>

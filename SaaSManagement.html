@@ -1,0 +1,149 @@
+<!-- SAAS MANAGEMENT VIEW -->
+<section id="saas-management" class="page-section hidden animate-fade-in">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">Management Renewall</h2>
+            <p class="text-slate-500 text-sm">Kelola lisensi software, langganan cloud, domain, dan VPS</p>
+        </div>
+        <button onclick="openSaaSModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-4 rounded shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Tambah Lisensi</span>
+        </button>
+    </div>
+
+    <!-- Filter & Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="saas-stats-container">
+        <!-- Diisi oleh JavaScript secara dinamis -->
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="saas-search" placeholder="Cari layanan, vendor..." class="pl-9 pr-4 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 w-64" oninput="renderSaaSTable()">
+            </div>
+            <button onclick="filterSaaS('All')" class="text-xs font-semibold text-brand-600 hover:text-brand-800">Clear Filter</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="p-4 border-b">Nama & Vendor</th>
+                        <th class="p-4 border-b">Kategori</th>
+                        <th class="p-4 border-b">Periode / Biaya</th>
+                        <th class="p-4 border-b">Siklus Penagihan</th>
+                        <th class="p-4 border-b">Status / Kedaluwarsa</th>
+                        <th class="p-4 border-b text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="saas-table-body" class="text-sm divide-y divide-slate-100">
+                    <!-- Rows will be populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- SAAS MODAL -->
+<div id="saas-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 animate-fade-in px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800" id="saas-modal-title">Tambah Lisensi / Layanan</h3>
+            <button type="button" onclick="closeSaaSModal()" class="text-slate-400 hover:text-red-500" title="Tutup Modal"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto">
+            <form id="saas-form" onsubmit="handleSaveSaaS(event)">
+                <input type="hidden" id="saas-id" name="id">
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori <span class="text-red-500">*</span></label>
+                        <select name="category" id="saas-category" title="Kategori" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none select-style bg-white">
+                            <option value="Software">Software / SaaS (Google Workspace, Office)</option>
+                            <option value="Domain">Domain (Web Address)</option>
+                            <option value="VPS">VPS / Cloud Hosting</option>
+                            <option value="Other">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Vendor/Provider <span class="text-red-500">*</span></label>
+                        <input type="text" name="vendor" id="saas-vendor" required placeholder="Ex: Google, Niagahoster" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Layanan / Domain <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" id="saas-name" required placeholder="Ex: Google Workspace, example.com" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Siklus Penagihan <span class="text-red-500">*</span></label>
+                        <select name="billingCycle" id="saas-billing-cycle" title="Siklus Penagihan" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none select-style bg-white">
+                            <option value="1 Bulan">1 Bulan</option>
+                            <option value="3 Bulan">3 Bulan</option>
+                            <option value="6 Bulan">6 Bulan</option>
+                            <option value="1 Tahun">1 Tahun</option>
+                            <option value="2 Tahun">2 Tahun</option>
+                            <option value="3 Tahun">3 Tahun</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya (Rp) <span class="text-red-500">*</span></label>
+                        <input type="text" name="cost" id="saas-cost" required placeholder="Ex: 150.000" oninput="formatSaaSCost(this)" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
+                        <input type="date" name="startDate" id="saas-start-date" title="Tanggal Mulai" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal Kedaluwarsa <span class="text-red-500">*</span></label>
+                        <input type="date" name="expiryDate" id="saas-expiry-date" title="Tanggal Kedaluwarsa" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+                    <select name="status" id="saas-status" title="Status Layanan" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none select-style bg-white">
+                        <option value="Active">Aktif</option>
+                        <option value="Expired">Kedaluwarsa</option>
+                        <option value="Cancelled">Dibatalkan</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Evidence / Attachment Link</label>
+                    <input type="url" name="evidenceLink" id="saas-evidence-link" title="Link Bukti Pembayaran / Kontrak" placeholder="Ex: https://drive.google.com/..." class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Catatan Tambahan</label>
+                    <textarea name="notes" id="saas-notes" rows="2" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none" placeholder="Ex: Linked account admin@domain.com, IP: 192.168.1.1"></textarea>
+                </div>
+
+                <div class="mb-6 bg-brand-50 p-3 rounded-lg border border-brand-100">
+                    <label class="block text-xs font-bold text-brand-700 uppercase mb-1"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Update Journey / Perpanjangan</label>
+                    <textarea name="newHistoryLog" id="saas-new-history" rows="2" class="w-full p-2 border border-brand-200 rounded text-sm focus:border-brand-500 outline-none bg-white" placeholder="Isi jika Anda baru saja memperpanjang. Contoh: Diperpanjang 2 tahun per 6 bulan (Rp 300rb)"></textarea>
+                </div>
+
+                <!-- History Container (Only visibly populated on Edit) -->
+                <div id="saas-history-wrapper" class="mb-6 hidden">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2 border-b border-slate-100 pb-1">Histori Perjalanan (Journey)</label>
+                    <div id="saas-history-container" class="max-h-48 overflow-y-auto bg-slate-50 rounded-lg p-2 border border-slate-100">
+                        <!-- Loaded via JS -->
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeSaaSModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors">Batal</button>
+                    <button type="submit" id="btn-save-saas" class="px-4 py-2 text-sm font-bold text-white bg-brand-600 rounded hover:bg-brand-700 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
