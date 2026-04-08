@@ -1,0 +1,512 @@
+<script>
+/**
+ * NETWORK SLA & CONTRACTS JS
+ * Uses data pre-loaded by refreshData() via apiGetAllData.
+ */
+
+let networkSLADatas = [];
+let networkContracts = [];
+
+function initNetworkSLA() {
+    // Use data already fetched by refreshData() if available
+    if (typeof window.networkSLAsCached !== 'undefined') {
+        networkSLADatas = window.networkSLAsCached || [];
+    }
+    if (typeof window.networkContractsCached !== 'undefined') {
+        networkContracts = window.networkContractsCached || [];
+    }
+
+    populateSLAYearFilter();
+    renderSLATable();
+    renderContractTable();
+}
+
+// Fallback: load from API independently (for sidebar click before refreshData completes)
+function loadNetworkSLAData() {
+    google.script.run.withSuccessHandler(function(data) {
+        networkSLADatas = data || [];
+        window.networkSLAsCached = networkSLADatas;
+        populateSLAYearFilter();
+        renderSLATable();
+    }).apiGetNetworkSLA();
+}
+
+function loadNetworkContracts() {
+    google.script.run.withSuccessHandler(function(data) {
+        networkContracts = data || [];
+        window.networkContractsCached = networkContracts;
+        renderContractTable();
+    }).apiGetNetworkContracts();
+}
+
+// --- TAB SWITCHING ---
+function switchNetworkSLATab(tab) {
+    document.getElementById('tab-sla-tracker').classList.remove('border-brand-600', 'text-brand-600');
+    document.getElementById('tab-sla-tracker').classList.add('border-transparent', 'text-slate-500');
+    
+    document.getElementById('tab-contract-billing').classList.remove('border-brand-600', 'text-brand-600');
+    document.getElementById('tab-contract-billing').classList.add('border-transparent', 'text-slate-500');
+    
+    document.getElementById('content-sla-tracker').classList.add('hidden');
+    document.getElementById('content-contract-billing').classList.add('hidden');
+
+    if(tab === 'sla-tracker') {
+        document.getElementById('tab-sla-tracker').classList.add('border-brand-600', 'text-brand-600');
+        document.getElementById('tab-sla-tracker').classList.remove('border-transparent', 'text-slate-500');
+        document.getElementById('content-sla-tracker').classList.remove('hidden');
+    } else {
+        document.getElementById('tab-contract-billing').classList.add('border-brand-600', 'text-brand-600');
+        document.getElementById('tab-contract-billing').classList.remove('border-transparent', 'text-slate-500');
+        document.getElementById('content-contract-billing').classList.remove('hidden');
+    }
+}
+
+// --- SLA TRACKER TAB ---
+function populateSLAYearFilter() {
+    const yearsSet = new Set(networkSLADatas.map(item => parseInt(item.year)).filter(Boolean));
+    const currentYear = new Date().getFullYear();
+    
+    // Add standard range (current year +/- 2 years)
+    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+        yearsSet.add(y);
+    }
+    
+    const years = Array.from(yearsSet).sort((a,b) => b - a); // Descending
+    
+    const select = document.getElementById('sla-year-filter');
+    const formSelect = document.getElementById('sla-year');
+    
+    if (select) {
+        select.innerHTML = '';
+        years.forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.text = y;
+            if (y === currentYear) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+    
+    if (formSelect) {
+        formSelect.innerHTML = '';
+        years.forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.text = y;
+            if (y === currentYear) opt.selected = true;
+            formSelect.appendChild(opt);
+        });
+    }
+}
+
+function renderSLATable() {
+    const yearSelect = document.getElementById('sla-year-filter');
+    if (!yearSelect) return;
+    
+    const year = yearSelect.value || new Date().getFullYear();
+    const dataForYear = networkSLADatas.filter(d => d.year == year);
+    
+    // Hardcoded locations
+    let locations = ['Head Office Wisma MRA', 'Bvlgari Plaza Indonesia', 'Bvlgari Plaza Senayan'];
+    
+    // Also add any extra locations found in data (backward compatibility)
+    dataForYear.forEach(d => {
+        if (d.location && !locations.includes(d.location)) locations.push(d.location);
+    });
+
+    const headerEl = document.getElementById('sla-table-header');
+    const bodyEl = document.getElementById('sla-table-body');
+    if (!headerEl || !bodyEl) return;
+
+    if (locations.length === 0) {
+        headerEl.innerHTML = '<th class="p-4 border-b">Month</th><th class="p-4 border-b text-slate-400">Belum ada lokasi</th>';
+        bodyEl.innerHTML = '<tr><td colspan="2" class="p-8 text-center text-slate-400 italic">Tidak ada data. Tambahkan data SLA terlebih dahulu.</td></tr>';
+        return;
+    }
+
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    // Header
+    let headerHTML = '<th class="p-4 border-b">Month</th>';
+    locations.forEach(loc => {
+        headerHTML += `<th class="p-4 border-b">${loc}</th>`;
+    });
+    headerEl.innerHTML = headerHTML;
+
+    // Body
+    let tbodyHTML = '';
+    let locationTotals = {};
+    let locationCounts = {};
+    
+    locations.forEach(loc => {
+        locationTotals[loc] = 0;
+        locationCounts[loc] = 0;
+    });
+
+    months.forEach((month) => {
+        let rowHTML = `<tr><td class="p-3 border-b border-slate-100 font-semibold text-slate-700">${month}</td>`;
+        
+        locations.forEach(loc => {
+            const entry = dataForYear.find(d => d.month === month && d.location === loc);
+            if(entry && entry.percentage) {
+                const val = parseFloat(entry.percentage);
+                locationTotals[loc] += val;
+                locationCounts[loc]++;
+                
+                let colorClass = val < 99.5 ? 'text-red-600 font-bold' : 'text-slate-600';
+                let noteIcon = entry.notes ? `<i class="fa-solid fa-circle-info text-[10px] ml-1 text-slate-400" title="${entry.notes}"></i>` : '';
+                rowHTML += `<td class="p-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50" onclick="editSLA('${entry.id}')">
+                    <span class="${colorClass}">${val.toFixed(2)}%</span>${noteIcon}
+                </td>`;
+            } else {
+                rowHTML += '<td class="p-3 border-b border-slate-100 text-slate-300">-</td>';
+            }
+        });
+        rowHTML += '</tr>';
+        tbodyHTML += rowHTML;
+    });
+
+    // Sub Total & Total (Average)
+    let subTotalHTML = '<tr class="bg-yellow-50 font-bold border-y-2 border-slate-200"><td class="p-3 text-slate-700">Sub Total</td>';
+
+    locations.forEach(loc => {
+        const avg = locationCounts[loc] > 0 ? (locationTotals[loc] / locationCounts[loc]) : 0;
+        subTotalHTML += `<td class="p-3 text-brand-700">${avg > 0 ? avg.toFixed(2) + '%' : '-'}</td>`;
+    });
+    subTotalHTML += '</tr>';
+
+    let totalHTML = '<tr class="bg-brand-500 font-bold text-white shadow-inner"><td class="p-3">Total</td>';
+    locations.forEach(loc => {
+        const avg = locationCounts[loc] > 0 ? (locationTotals[loc] / locationCounts[loc]) : 0;
+        totalHTML += `<td class="p-3">${avg > 0 ? avg.toFixed(2) + '%' : '-'}</td>`;
+    });
+    totalHTML += '</tr>';
+
+    bodyEl.innerHTML = tbodyHTML + subTotalHTML + totalHTML;
+}
+
+// Modal Handlers SLA
+function openSLAModal() {
+    document.getElementById('sla-id').value = '';
+    document.getElementById('sla-form').reset();
+    document.getElementById('sla-notes').value = ''; // Ensure notes are cleared
+    // Re-set current year as default after reset
+    const currentYear = new Date().getFullYear();
+    const yearSel = document.getElementById('sla-year');
+    if (yearSel) yearSel.value = currentYear;
+    
+    document.getElementById('sla-modal-title').innerText = 'Input Data SLA';
+    document.getElementById('sla-modal').classList.remove('hidden');
+    document.getElementById('sla-modal').classList.add('flex');
+}
+
+function closeSLAModal() {
+    document.getElementById('sla-modal').classList.add('hidden');
+    document.getElementById('sla-modal').classList.remove('flex');
+}
+
+function editSLA(id) {
+    const data = networkSLADatas.find(d => d.id == id);
+    if (!data) return;
+    document.getElementById('sla-id').value = data.id;
+    document.getElementById('sla-year').value = data.year;
+    document.getElementById('sla-month').value = data.month;
+    document.getElementById('sla-location').value = data.location;
+    document.getElementById('sla-percentage').value = data.percentage;
+    document.getElementById('sla-notes').value = data.notes || '';
+    
+    document.getElementById('sla-modal-title').innerText = 'Edit Data SLA';
+    document.getElementById('sla-modal').classList.remove('hidden');
+    document.getElementById('sla-modal').classList.add('flex');
+}
+
+function handleSaveSLA(e) {
+    if(e) e.preventDefault();
+    const id = document.getElementById('sla-id').value;
+    const data = {
+        year: document.getElementById('sla-year').value,
+        month: document.getElementById('sla-month').value,
+        location: document.getElementById('sla-location').value,
+        percentage: document.getElementById('sla-percentage').value,
+        notes: document.getElementById('sla-notes').value
+    };
+
+    const btn = document.getElementById('btn-save-sla');
+    const ogText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    btn.disabled = true;
+
+    if(id) {
+        data.id = id;
+        google.script.run
+            .withSuccessHandler(res => {
+                if(res.success) {
+                    closeSLAModal();
+                    loadNetworkSLAData();
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data SLA diperbarui.', timer: 1500, showConfirmButton: false});
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .withFailureHandler(err => {
+                Swal.fire('Server Error', err.message, 'error');
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .apiUpdateNetworkSLA(data);
+    } else {
+        // Prevent duplicate Month+Location+Year -> instead of erroring, update existing
+        const exs = networkSLADatas.find(d => d.year == data.year && d.month == data.month && d.location == data.location);
+        if(exs) {
+            data.id = exs.id;
+            google.script.run
+                .withSuccessHandler(res => {
+                    closeSLAModal(); loadNetworkSLAData();
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data SLA diperbarui (Timpa existing).', timer: 1500, showConfirmButton: false});
+                    btn.innerHTML = ogText; btn.disabled = false;
+                })
+                .withFailureHandler(err => {
+                    Swal.fire('Server Error', err.message, 'error');
+                    btn.innerHTML = ogText; btn.disabled = false;
+                })
+                .apiUpdateNetworkSLA(data);
+        } else {
+            google.script.run
+                .withSuccessHandler(res => {
+                    if(res.success) {
+                        closeSLAModal();
+                        loadNetworkSLAData();
+                        Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data SLA ditambahkan.', timer: 1500, showConfirmButton: false});
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                    btn.innerHTML = ogText; btn.disabled = false;
+                })
+                .withFailureHandler(err => {
+                    Swal.fire('Server Error', err.message, 'error');
+                    btn.innerHTML = ogText; btn.disabled = false;
+                })
+                .apiAddNetworkSLA(data);
+        }
+    }
+}
+
+// --- CONTRACT & BILLING TAB ---
+function renderContractTable() {
+    const list = document.getElementById('contract-table-body');
+    if (!list) return;
+    
+    const searchEl = document.getElementById('contract-search');
+    const term = searchEl ? searchEl.value.toLowerCase() : '';
+    
+    let html = '';
+    
+    // Filter
+    const filtered = networkContracts.filter(c => {
+        if (!term) return true;
+        return (c.location && c.location.toLowerCase().includes(term)) ||
+               (c.provider && c.provider.toLowerCase().includes(term)) ||
+               (c.contractNo && c.contractNo.toLowerCase().includes(term));
+    });
+
+    // Calculate Totals for Summary Cards (based on active status)
+    let totalActive = 0;
+    let totalMonthly = 0;
+    let totalAnnual = 0;
+
+    networkContracts.forEach(c => {
+        if (c.status !== 'Terminated') {
+            totalActive++;
+            totalMonthly += (parseFloat(c.monthlyCost) || 0);
+            totalAnnual += (parseFloat(c.annualCost) || 0);
+        }
+    });
+
+    const elActive = document.getElementById('billing-total-active');
+    const elMonthly = document.getElementById('billing-total-monthly');
+    const elAnnual = document.getElementById('billing-total-annual');
+
+    if (elActive) elActive.innerText = totalActive;
+    if (elMonthly) elMonthly.innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalMonthly);
+    if (elAnnual) elAnnual.innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAnnual);
+
+    if(filtered.length === 0) {
+        list.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400 italic">Tidak ada data kontrak.</td></tr>';
+        return;
+    }
+
+    filtered.forEach(c => {
+        const mCostFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(c.monthlyCost || 0);
+        const yCostFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(c.annualCost || 0);
+        
+        const startFmt = c.startDate ? new Date(c.startDate).toLocaleDateString('id-ID') : '?';
+        const expiryFmt = c.expiryDate ? new Date(c.expiryDate).toLocaleDateString('id-ID') : '?';
+        const masaKontrak = `<div class="text-[10px] text-slate-500">${startFmt} s/d</div><div class="font-semibold text-slate-700">${expiryFmt}</div>`;
+
+        const statusBadge = c.status === 'Terminated' 
+            ? '<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs font-bold">Diputus</span>'
+            : '<span class="bg-green-100 text-green-600 px-2 py-0.5 rounded text-xs font-bold">Aktif</span>';
+
+        html += `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="p-4">
+                    <div class="font-bold text-slate-800">${c.location}</div>
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5"><i class="fa-solid fa-user-tag text-slate-400 mr-1"></i> ${c.user || '-'}</div>
+                </td>
+                <td class="p-4">
+                    <div class="font-semibold text-brand-700"><i class="fa-solid fa-globe text-brand-400 mr-1"></i> ${c.provider}</div>
+                </td>
+                <td class="p-4">
+                    <div class="text-xs text-slate-700">Contract: <span class="font-mono bg-slate-100 px-1 rounded">${c.contractNo}</span></div>
+                    <div class="text-xs text-slate-700 mt-1">Billing: <span class="font-mono bg-slate-100 px-1 rounded">${c.billingNo}</span></div>
+                </td>
+                <td class="p-4 font-semibold text-slate-700">${mCostFmt}</td>
+                <td class="p-4 font-bold text-slate-800">${yCostFmt}</td>
+                <td class="p-4">${masaKontrak}</td>
+                <td class="p-4">${statusBadge}</td>
+                <td class="p-4 text-center">
+                    <button onclick="editContract('${c.id}')" class="text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 p-2 rounded transition-colors" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button onclick="deleteContract('${c.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition-colors ml-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+    });
+    list.innerHTML = html;
+}
+
+function formatContractCost(input) {
+    let value = input.value.replace(/\D/g, '');
+    if(value !== '') {
+        input.value = new Intl.NumberFormat('id-ID').format(value);
+    }
+}
+
+function openContractModal() {
+    document.getElementById('contract-id').value = '';
+    document.getElementById('contract-form').reset();
+    document.getElementById('contract-modal-title').innerText = 'Input Kontrak & Billing';
+    document.getElementById('contract-status').value = 'Active';
+    // Re-populate dynamic dropdowns after reset
+    if (typeof populateLocationDropdown === 'function') populateLocationDropdown();
+    if (typeof populateCompanySelector === 'function') populateCompanySelector();
+    document.getElementById('contract-modal').classList.remove('hidden');
+    document.getElementById('contract-modal').classList.add('flex');
+}
+
+function closeContractModal() {
+    document.getElementById('contract-modal').classList.add('hidden');
+    document.getElementById('contract-modal').classList.remove('flex');
+}
+
+function editContract(id) {
+    const data = networkContracts.find(c => c.id == id);
+    if (!data) return;
+    
+    // Re-populate dropdowns first so values can be set
+    if (typeof populateLocationDropdown === 'function') populateLocationDropdown();
+    if (typeof populateCompanySelector === 'function') populateCompanySelector();
+
+    // Use setTimeout to allow dropdown population to complete
+    setTimeout(function() {
+        document.getElementById('contract-id').value = data.id;
+        document.getElementById('contract-location').value = data.location;
+        document.getElementById('contract-provider').value = data.provider;
+        document.getElementById('contract-user').value = data.user;
+        document.getElementById('contract-no').value = data.contractNo;
+        document.getElementById('contract-billing').value = data.billingNo;
+        document.getElementById('contract-start').value = data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : '';
+        document.getElementById('contract-expiry').value = data.expiryDate ? new Date(data.expiryDate).toISOString().split('T')[0] : '';
+        document.getElementById('contract-monthly-cost').value = new Intl.NumberFormat('id-ID').format(data.monthlyCost || 0);
+        document.getElementById('contract-status').value = data.status || 'Active';
+        
+        document.getElementById('contract-modal-title').innerText = 'Edit Kontrak & Billing';
+        document.getElementById('contract-modal').classList.remove('hidden');
+        document.getElementById('contract-modal').classList.add('flex');
+    }, 50);
+}
+
+function handleSaveContract(e) {
+    if(e) e.preventDefault();
+    const id = document.getElementById('contract-id').value;
+    
+    // Parse formatting back to plain numbers
+    let mCostRaw = document.getElementById('contract-monthly-cost').value.replace(/\./g, '');
+
+    const data = {
+        location: document.getElementById('contract-location').value,
+        provider: document.getElementById('contract-provider').value,
+        user: document.getElementById('contract-user').value,
+        contractNo: document.getElementById('contract-no').value,
+        billingNo: document.getElementById('contract-billing').value,
+        startDate: document.getElementById('contract-start').value,
+        expiryDate: document.getElementById('contract-expiry').value,
+        monthlyCost: parseInt(mCostRaw) || 0,
+        status: document.getElementById('contract-status').value
+    };
+
+    const btn = document.getElementById('btn-save-contract');
+    const ogText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    btn.disabled = true;
+
+    if(id) {
+        data.id = id;
+        google.script.run
+            .withSuccessHandler(res => {
+                if(res.success) {
+                    closeContractModal();
+                    loadNetworkContracts();
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data Kontrak diperbarui.', timer: 1500, showConfirmButton: false});
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .withFailureHandler(err => {
+                Swal.fire('Server Error', err.message, 'error');
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .apiUpdateNetworkContract(data);
+    } else {
+        google.script.run
+            .withSuccessHandler(res => {
+                if(res.success) {
+                    closeContractModal();
+                    loadNetworkContracts();
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Data Kontrak ditambahkan.', timer: 1500, showConfirmButton: false});
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .withFailureHandler(err => {
+                Swal.fire('Server Error', err.message, 'error');
+                btn.innerHTML = ogText; btn.disabled = false;
+            })
+            .apiAddNetworkContract(data);
+    }
+}
+
+function deleteContract(id) {
+    Swal.fire({
+        title: 'Hapus Kontrak?',
+        text: "Data ini tidak dapat dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#cbd5e1',
+        confirmButtonText: 'Ya, Hapus!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            google.script.run.withSuccessHandler(res => {
+                if(res.success) {
+                    Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
+                    loadNetworkContracts();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            }).apiDeleteNetworkContract(id);
+        }
+    });
+}
+</script>

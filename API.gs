@@ -18,7 +18,9 @@
       costAnalysis: calculateCostAnalysis(year),
       gisLocations: getGISLocationNames(),
       helpdeskTickets: getData('HelpdeskTickets'),
-      saas: getData('SaaS_Licenses')
+      saas: getData('SaaS_Licenses'),
+      networkSLAs: getData('Network_SLA'),
+      networkContracts: getData('Network_Contracts')
     };
   }
 
@@ -474,4 +476,47 @@
       downtimePerLocation,
       resolutionRate, avgResponseMinutes, avgResolveMinutes
     };
+  }
+
+  // --- Network SLA & Contracts APIs ---
+
+  function apiGetNetworkSLA() {
+    return getData('Network_SLA');
+  }
+
+  function apiAddNetworkSLA(data) {
+    return addRow('Network_SLA', data);
+  }
+  
+  function apiUpdateNetworkSLA(data) {
+    return updateRow('Network_SLA', data.id, data);
+  }
+
+  function apiDeleteNetworkSLA(id) {
+    return deleteRow('Network_SLA', id);
+  }
+
+  function apiGetNetworkContracts() {
+    return getData('Network_Contracts');
+  }
+
+  function apiAddNetworkContract(data) {
+    if (data.monthlyCost) {
+      // Remove formatting (e.g. dots) before calculation
+      const mCost = parseFloat(String(data.monthlyCost || 0).replace(/\./g, ''));
+      data.annualCost = mCost * 12;
+    }
+    return addRow('Network_Contracts', data);
+  }
+
+  function apiUpdateNetworkContract(data) {
+    if (data.monthlyCost) {
+      const mCost = parseFloat(String(data.monthlyCost || 0).replace(/\./g, ''));
+      data.annualCost = mCost * 12;
+    }
+    return updateRow('Network_Contracts', data.id, data);
+  }
+
+  function apiDeleteNetworkContract(id) {
+    return deleteRow('Network_Contracts', id);
   }

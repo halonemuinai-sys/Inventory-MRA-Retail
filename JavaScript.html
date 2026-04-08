@@ -95,7 +95,7 @@
             'nav-bulk-import', 'nav-employees', 'nav-budgeting', 'nav-company-budget-view', 
             'nav-cost', 'nav-config', 'head-admin', 'head-legacy-helpdesk', 'nav-ticket-support',
             'nav-ticket-summary', 'head-it-helpdesk', 'nav-helpdesk-input', 'nav-helpdesk-list',
-            'nav-helpdesk-dashboard', 'nav-helpdesk-report', 'nav-saas'
+            'nav-helpdesk-dashboard', 'nav-helpdesk-report', 'nav-saas', 'nav-network-sla'
         ];
         allElements.forEach(show);
 
@@ -141,6 +141,9 @@
             configData = data.config;
             costAnalysisData = data.costAnalysis;
             window.saasData = data.saas || [];
+            window.networkContractsData = data.networkContracts || [];
+            window.networkSLAsCached = data.networkSLAs || [];
+            window.networkContractsCached = data.networkContracts || [];
             gisLocations = data.gisLocations || [];
             if (typeof initGISLogic === 'function') initGISLogic(gisLocations);
 
@@ -181,6 +184,7 @@
                 if (typeof populateHelpdeskDropdowns === 'function') populateHelpdeskDropdowns();
             }
             if (typeof initSaaS === 'function') initSaaS();
+            if (typeof initNetworkSLA === 'function') initNetworkSLA();
 
             showLoading(false);
         }).apiGetAllData(selectedGlobalYear);
@@ -313,7 +317,25 @@
             sel.appendChild(opt);
         }
     }
-    function changeGlobalYear(year) { selectedGlobalYear = parseInt(year); const d1 = document.getElementById('dash-year-select'); const d2 = document.getElementById('cost-year-select'); if (d1) d1.value = selectedGlobalYear; if (d2) d2.value = selectedGlobalYear; showLoading(true); google.script.run.withSuccessHandler(costs => { costAnalysisData = costs; updateDashboard(); renderCostTable(); showLoading(false); }).apiRunCostAnalysis(selectedGlobalYear); }
+    function changeGlobalYear(year) { 
+        selectedGlobalYear = parseInt(year); 
+        const d1 = document.getElementById('dash-year-select'); 
+        const d2 = document.getElementById('cost-year-select'); 
+        const d3 = document.getElementById('sla-year-filter');
+        if (d1) d1.value = selectedGlobalYear; 
+        if (d2) d2.value = selectedGlobalYear; 
+        if (d3) {
+            d3.value = selectedGlobalYear;
+            if (typeof renderSLATable === 'function') renderSLATable();
+        }
+        showLoading(true); 
+        google.script.run.withSuccessHandler(costs => { 
+            costAnalysisData = costs; 
+            updateDashboard(); 
+            renderCostTable(); 
+            showLoading(false); 
+        }).apiRunCostAnalysis(selectedGlobalYear); 
+    }
     function changeCostYear(year) { changeGlobalYear(year); }
     function handleCompanySwitch(val) {
         activeCompany = val;
@@ -393,6 +415,26 @@
                 }
             }
         });
+        // Count and collect Network Contract warnings
+        const netContracts = window.networkContractsData || [];
+        netContracts.forEach(item => {
+            if (item.expiryDate && item.status !== 'Terminated') {
+                const endDate = new Date(item.expiryDate);
+                const diffTime = endDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 30) {
+                    hasWarning = true;
+                    warningCount++;
+                    warningItems.push({
+                        item: { id: item.id, brand: 'ISP: ' + item.provider, model: item.location, serial: item.contractNo, isNetwork: true },
+                        diffDays: diffDays,
+                        empName: 'Network / ISP',
+                        budgetFormatted: 'Rp ' + (parseFloat(item.monthlyCost) || 0).toLocaleString('id-ID')
+                    });
+                }
+            }
+        });
         // Count and collect SaaS warnings
         const saas = window.saasData || [];
         saas.forEach(item => {
@@ -447,8 +489,10 @@
                 const urgencyBg = diffDays <= 7 ? 'bg-red-50' : (diffDays <= 14 ? 'bg-orange-50' : 'bg-yellow-50');
                 const urgencyBorder = diffDays <= 7 ? 'border-red-500' : (diffDays <= 14 ? 'border-orange-500' : 'border-yellow-500');
                 const urgencyText = diffDays <= 7 ? 'text-red-700' : (diffDays <= 14 ? 'text-orange-700' : 'text-yellow-700');
-
-                const onClickAction = item.isSaaS ? `showSection('saas-management'); editSaaS('${item.id}');` : `showSection('inventory'); editInventoryItem('${item.id}');`;
+                
+                let onClickAction = `showSection('inventory'); editInventoryItem('${item.id}');`;
+                if (item.isSaaS) onClickAction = `showSection('saas-management'); editSaaS('${item.id}');`;
+                if (item.isNetwork) onClickAction = `showSection('network-sla'); switchNetworkSLATab('contract-billing'); editContract('${item.id}');`;
 
                 warningList.innerHTML += `
                         <div class="min-w-[280px] bg-white border border-slate-100 border-l-4 ${urgencyBorder} rounded-xl p-4 shadow-sm relative flex-shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="${onClickAction}">
@@ -764,7 +808,7 @@
 
     function populateBASTAdminDropdown() { const sel = document.getElementById('bast-admin-select'); sel.innerHTML = '<option value="">-- Pilih Admin --</option>'; masterData.filter(m => m.category === 'AdminSignatory').forEach(m => { sel.innerHTML += `<option value="${m.value}">${m.value}</option>`; }); }
 
-    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company'); const otherFormSel = document.getElementById('form-other-company'); const mobFormSel = document.getElementById('mob-form-company'); [invFormSel, empFormSel, otherFormSel, mobFormSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Unit Bisnis --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
+    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company'); const otherFormSel = document.getElementById('form-other-company'); const mobFormSel = document.getElementById('mob-form-company'); const contractUserSel = document.getElementById('contract-user'); [invFormSel, empFormSel, otherFormSel, mobFormSel, contractUserSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Pilih Perusahaan / Pemakai --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
 
     function populateMasterDropdowns() {
         const fill = (id, cat) => {

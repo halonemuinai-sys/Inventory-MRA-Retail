@@ -1,0 +1,259 @@
+<!-- NETWORK SLA VIEW -->
+<section id="network-sla" class="page-section hidden animate-fade-in">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">Network SLA</h2>
+            <p class="text-slate-500 text-sm">Kelola Service Level Agreement dan Kontrak Jaringan</p>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="flex border-b border-slate-200 mb-6">
+        <button onclick="switchNetworkSLATab('sla-tracker')" id="tab-sla-tracker" class="px-4 py-2 font-semibold text-sm border-b-2 transition-colors border-brand-600 text-brand-600">SLA Tracker</button>
+        <button onclick="switchNetworkSLATab('contract-billing')" id="tab-contract-billing" class="px-4 py-2 font-semibold text-sm border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-700">Contract & Billing</button>
+    </div>
+
+    <!-- TAB 1: SLA TRACKER -->
+    <div id="content-sla-tracker" class="animate-fade-in">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-700">Persentase SLA Bulanan</h3>
+            <button onclick="openSLAModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-1.5 px-3 text-sm rounded shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Tambah Data SLA
+            </button>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-semibold text-slate-600">Pilih Tahun:</label>
+                    <select id="sla-year-filter" title="Pilih Tahun" onchange="renderSLATable()" class="border border-slate-200 rounded p-1 text-sm outline-none focus:border-brand-500">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr id="sla-table-header" class="bg-brand-50 text-brand-800 text-xs uppercase tracking-wider font-bold">
+                            <!-- Populated by JS: Month, Loc 1, Loc 2... -->
+                        </tr>
+                    </thead>
+                    <tbody id="sla-table-body" class="text-sm divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: CONTRACT & BILLING -->
+    <div id="content-contract-billing" class="hidden animate-fade-in">
+        <!-- Summary Cards for Billing -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-file-contract"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Kontrak Aktif</p>
+                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-active">0</h4>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Cost Bulanan</p>
+                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-monthly">Rp 0</h4>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Estimasi Cost Tahunan</p>
+                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-annual">Rp 0</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-700">Daftar Kontrak & Billing</h3>
+            <button onclick="openContractModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-1.5 px-3 text-sm rounded shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Tambah Kontrak
+            </button>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="contract-search" placeholder="Cari kontrak, ISP..." class="pl-9 pr-4 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 w-64" oninput="renderContractTable()">
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="p-4 border-b">Lokasi & Pemakai</th>
+                            <th class="p-4 border-b">Perusahaan Penyedia (ISP)</th>
+                            <th class="p-4 border-b">Nomor Kontrak & Billing</th>
+                            <th class="p-4 border-b">Cost Bulanan</th>
+                            <th class="p-4 border-b">Cost Tahunan</th>
+                            <th class="p-4 border-b">Masa Kontrak</th>
+                            <th class="p-4 border-b">Status</th>
+                            <th class="p-4 border-b text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contract-table-body" class="text-sm divide-y divide-slate-100">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: ADD SLA -->
+<div id="sla-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 animate-fade-in px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800" id="sla-modal-title">Input Data SLA</h3>
+            <button type="button" onclick="closeSLAModal()" class="text-slate-400 hover:text-red-500" title="Tutup"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-6">
+            <form id="sla-form" onsubmit="handleSaveSLA(event)">
+                <input type="hidden" id="sla-id" name="id">
+                
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tahun <span class="text-red-500">*</span></label>
+                    <select name="year" id="sla-year" title="Tahun" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bulan <span class="text-red-500">*</span></label>
+                    <select name="month" id="sla-month" title="Bulan" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                        <option value="January">January</option><option value="February">February</option>
+                        <option value="March">March</option><option value="April">April</option>
+                        <option value="May">May</option><option value="June">June</option>
+                        <option value="July">July</option><option value="August">August</option>
+                        <option value="September">September</option><option value="October">October</option>
+                        <option value="November">November</option><option value="December">December</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Lokasi <span class="text-red-500">*</span></label>
+                    <select name="location" id="sla-location" title="Lokasi" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                        <option value="" disabled selected>-- Pilih Lokasi --</option>
+                        <option value="Head Office Wisma MRA">Head Office Wisma MRA</option>
+                        <option value="Bvlgari Plaza Indonesia">Bvlgari Plaza Indonesia</option>
+                        <option value="Bvlgari Plaza Senayan">Bvlgari Plaza Senayan</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Persentase SLA (%) <span class="text-red-500">*</span></label>
+                    <input type="number" step="0.01" name="percentage" id="sla-percentage" required placeholder="Ex: 99.98" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Keterangan / Notes</label>
+                    <textarea name="notes" id="sla-notes" title="Keterangan" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none h-20 resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeSLAModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors">Batal</button>
+                    <button type="submit" id="btn-save-sla" class="px-4 py-2 text-sm font-bold text-white bg-brand-600 rounded hover:bg-brand-700 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ADD CONTRACT & BILLING -->
+<div id="contract-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 animate-fade-in px-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800" id="contract-modal-title">Input Kontrak & Billing</h3>
+            <button type="button" onclick="closeContractModal()" class="text-slate-400 hover:text-red-500" title="Tutup"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto">
+            <form id="contract-form" onsubmit="handleSaveContract(event)">
+                <input type="hidden" id="contract-id" name="id">
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Lokasi <span class="text-red-500">*</span></label>
+                        <select name="location" id="contract-location" title="Lokasi Kontrak" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                             <option value="" disabled selected>-- Pilih Lokasi --</option>
+                             <option value="Head Office Wisma MRA">Head Office Wisma MRA</option>
+                             <option value="Bvlgari Plaza Indonesia">Bvlgari Plaza Indonesia</option>
+                             <option value="Bvlgari Plaza Senayan">Bvlgari Plaza Senayan</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Perusahaan Penyedia (ISP) <span class="text-red-500">*</span></label>
+                        <input type="text" name="provider" id="contract-provider" required placeholder="Ex: Biznet, CBN" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pemakai (Perusahaan / Company) <span class="text-red-500">*</span></label>
+                    <select name="user" id="contract-user" title="Pemakai" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none select-style bg-white">
+                        <option value="" disabled selected>-- Pilih Perusahaan --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Record Contract (No) <span class="text-red-500">*</span></label>
+                        <input type="text" name="contractNo" id="contract-no" required placeholder="No. Kontrak" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">No Billing <span class="text-red-500">*</span></label>
+                        <input type="text" name="billingNo" id="contract-billing" required placeholder="No. Billing ISP" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kontrak Sejak <i class="fa-regular fa-calendar-plus text-[10px] ml-1"></i></label>
+                        <input type="date" name="startDate" id="contract-start" title="Tanggal Mulai Kontrak" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tgl. Kadaluarsa <i class="fa-regular fa-calendar-xmark text-[10px] ml-1"></i></label>
+                        <input type="date" name="expiryDate" id="contract-expiry" title="Tanggal Kadaluarsa" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="mb-4 bg-brand-50 p-4 rounded-lg border border-brand-100">
+                    <label class="block text-xs font-bold text-brand-700 uppercase mb-1">Cost Bulanan (Rp) <span class="text-red-500">*</span></label>
+                    <input type="text" name="monthlyCost" id="contract-monthly-cost" required placeholder="Ex: 1.500.000" oninput="formatContractCost(this)" class="w-full p-2 border border-brand-200 rounded text-sm focus:border-brand-500 outline-none font-semibold text-brand-800">
+                    <p class="text-[10px] text-slate-500 mt-1"><i class="fa-solid fa-info-circle"></i> Cost Tahunan akan dikalkulasi secara otomatis (x12).</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
+                    <select name="status" id="contract-status" title="Status" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none select-style bg-white">
+                        <option value="Active">Aktif</option>
+                        <option value="Terminated">Diputus</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeContractModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors">Batal</button>
+                    <button type="submit" id="btn-save-contract" class="px-4 py-2 text-sm font-bold text-white bg-brand-600 rounded hover:bg-brand-700 transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

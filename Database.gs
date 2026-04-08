@@ -23,7 +23,9 @@ function setupDatabase() {
     'Master_Data': ['category', 'value'], 
     'Config': ['key', 'value'],
     'DataGIS': ['id', 'location', 'brand', 'lat', 'lng', 'koneksi', 'pc_laptop', 'jml_network', 'network_desc', 'cctv', 'nvr', 'printer', 'image', 'updatedAt'],
-    'SaaS_Licenses': ['id', 'company', 'category', 'name', 'vendor', 'cost', 'billingCycle', 'startDate', 'expiryDate', 'status', 'notes', 'evidenceLink', 'updatedAt']
+    'SaaS_Licenses': ['id', 'company', 'category', 'name', 'vendor', 'cost', 'billingCycle', 'startDate', 'expiryDate', 'status', 'notes', 'evidenceLink', 'updatedAt'],
+    'Network_SLA': ['id', 'year', 'month', 'location', 'percentage', 'notes', 'updatedAt'],
+    'Network_Contracts': ['id', 'location', 'provider', 'user', 'contractNo', 'billingNo', 'monthlyCost', 'annualCost', 'startDate', 'expiryDate', 'status', 'updatedAt']
   };
 
   Object.keys(schemas).forEach(sheetName => {
