@@ -15,7 +15,8 @@
       masterData: getData('Master_Data'),
       config: getData('Config'),
       users: apiGetUsers(), // Reuse safe user fetch
-      costAnalysis: calculateCostAnalysis(year),
+      costAnalysis: calculateCostAnalysis(year, 'Laptop'),
+      costAnalysisMobile: calculateCostAnalysis(year, 'Mobile'),
       gisLocations: getGISLocationNames(),
       helpdeskTickets: getData('HelpdeskTickets'),
       saas: getData('SaaS_Licenses'),
@@ -166,7 +167,11 @@
   // --- Analysis & Business Logic APIs ---
 
   function apiRunCostAnalysis(year) { 
-    return calculateCostAnalysis(year); 
+    return calculateCostAnalysis(year, 'Laptop'); 
+  }
+
+  function apiRunMobileCostAnalysis(year) { 
+    return calculateCostAnalysis(year, 'Mobile'); 
   }
 
   // --- Master Data Wrapper APIs ---

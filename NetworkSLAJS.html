@@ -17,6 +17,7 @@ function initNetworkSLA() {
     }
 
     populateSLAYearFilter();
+    populateContractYearFilter();
     renderSLATable();
     renderContractTable();
 }
@@ -292,52 +293,194 @@ function handleSaveSLA(e) {
 }
 
 // --- CONTRACT & BILLING TAB ---
+
+function populateContractYearFilter() {
+    const currentYear = new Date().getFullYear();
+    const yearsSet = new Set();
+    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+        yearsSet.add(y);
+    }
+    networkContracts.forEach(c => {
+        if (c.startDate) yearsSet.add(new Date(c.startDate).getFullYear());
+        if (c.expiryDate) yearsSet.add(new Date(c.expiryDate).getFullYear());
+    });
+    const years = Array.from(yearsSet).sort((a, b) => b - a);
+    const select = document.getElementById('contract-year-filter');
+    if (!select) return;
+    select.innerHTML = '';
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.text = y;
+        if (y === currentYear) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+/**
+ * Calculate how many months a contract was active in a given year.
+ * Returns a number between 0 and 12.
+ */
+function calcActiveMonths(contract, year) {
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31);
+    
+    let contractStart = contract.startDate ? new Date(contract.startDate) : null;
+    let contractEnd = contract.expiryDate ? new Date(contract.expiryDate) : null;
+    
+    // If terminated and no expiry, treat it as ended before this year
+    if (contract.status === 'Terminated' && !contractEnd) return 0;
+
+    // If no start date, assume it was active the whole year (legacy data)
+    if (!contractStart) contractStart = yearStart;
+
+    // If no end date and still active, count up to today or year end
+    const today = new Date();
+    if (!contractEnd) {
+        contractEnd = (today < yearEnd) ? today : yearEnd;
+    }
+
+    // No overlap check
+    if (contractEnd < yearStart || contractStart > yearEnd) return 0;
+
+    // Clamp to year boundaries
+    const effStart = contractStart > yearStart ? contractStart : yearStart;
+    const effEnd = contractEnd < yearEnd ? contractEnd : yearEnd;
+
+    // Calculate months difference (inclusive of both start and end months)
+    let months = (effEnd.getFullYear() - effStart.getFullYear()) * 12 + (effEnd.getMonth() - effStart.getMonth()) + 1;
+    
+    return Math.max(0, Math.min(12, months));
+}
+
 function renderContractTable() {
     const list = document.getElementById('contract-table-body');
     if (!list) return;
+
+    const yearSelect = document.getElementById('contract-year-filter');
+    const selectedYear = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
     
     const searchEl = document.getElementById('contract-search');
     const term = searchEl ? searchEl.value.toLowerCase() : '';
+    const fmtCurrency = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
     
-    let html = '';
-    
-    // Filter
+    // --- KPI Calculation ---
+    let totalActive = 0;
+    let totalTerminated = 0;
+    let grandRunningCost = 0;
+    let grandMonthlyActive = 0;
+    let grandAnnualActive = 0;
+    let companyMap = {}; // { companyName: { active, terminated, monthlyActive, runningCost } }
+
+    networkContracts.forEach(c => {
+        const company = c.user || 'Tidak Diketahui';
+        if (!companyMap[company]) {
+            companyMap[company] = { active: 0, terminated: 0, monthlyActive: 0, runningCost: 0, contracts: 0 };
+        }
+        companyMap[company].contracts++;
+
+        const monthlyCost = parseFloat(c.monthlyCost) || 0;
+        const activeMonths = calcActiveMonths(c, selectedYear);
+        const runningCost = monthlyCost * activeMonths;
+
+        companyMap[company].runningCost += runningCost;
+        grandRunningCost += runningCost;
+
+        if (c.status !== 'Terminated') {
+            totalActive++;
+            companyMap[company].active++;
+            companyMap[company].monthlyActive += monthlyCost;
+            grandMonthlyActive += monthlyCost;
+            grandAnnualActive += monthlyCost * 12;
+        } else {
+            totalTerminated++;
+            companyMap[company].terminated++;
+        }
+    });
+
+    // --- Render Status Badges ---
+    const elActive = document.getElementById('billing-total-active');
+    const elTerminated = document.getElementById('billing-total-terminated');
+    if (elActive) elActive.innerText = totalActive;
+    if (elTerminated) elTerminated.innerText = totalTerminated;
+
+    // --- Render Grand Total Bar ---
+    const elYearLabel = document.getElementById('billing-year-label');
+    const elGrandRunning = document.getElementById('billing-grand-running');
+    const elGrandMonthly = document.getElementById('billing-grand-monthly');
+    const elGrandAnnual = document.getElementById('billing-grand-annual');
+    if (elYearLabel) elYearLabel.innerText = '(' + selectedYear + ')';
+    if (elGrandRunning) elGrandRunning.innerText = fmtCurrency(grandRunningCost);
+    if (elGrandMonthly) elGrandMonthly.innerText = fmtCurrency(grandMonthlyActive);
+    if (elGrandAnnual) elGrandAnnual.innerText = fmtCurrency(grandAnnualActive);
+
+    // --- Render Per-Company KPI Cards ---
+    const kpiContainer = document.getElementById('company-kpi-container');
+    if (kpiContainer) {
+        const colorPalette = [
+            { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', icon: 'text-blue-500', accent: 'bg-blue-100' },
+            { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-500', accent: 'bg-emerald-100' },
+            { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', icon: 'text-violet-500', accent: 'bg-violet-100' },
+            { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', icon: 'text-amber-500', accent: 'bg-amber-100' },
+            { bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', icon: 'text-rose-500', accent: 'bg-rose-100' },
+            { bg: 'bg-cyan-50', border: 'border-cyan-100', text: 'text-cyan-700', icon: 'text-cyan-500', accent: 'bg-cyan-100' }
+        ];
+        let kpiHTML = '';
+        let idx = 0;
+        Object.keys(companyMap).sort().forEach(company => {
+            const d = companyMap[company];
+            const c = colorPalette[idx % colorPalette.length];
+            idx++;
+            kpiHTML += `
+                <div class="${c.bg} ${c.border} border rounded-xl p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="font-bold ${c.text} text-sm">${company}</h4>
+                            <p class="text-[10px] text-slate-500 mt-0.5">${d.contracts} kontrak (${d.active} aktif${d.terminated > 0 ? ', ' + d.terminated + ' diputus' : ''})</p>
+                        </div>
+                        <div class="${c.accent} ${c.icon} w-8 h-8 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-building text-sm"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Cost Bulanan (Aktif)</span>
+                            <span class="font-bold ${c.text}">${fmtCurrency(d.monthlyActive)}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Cost Berjalan ${selectedYear}</span>
+                            <span class="font-extrabold text-slate-800">${fmtCurrency(d.runningCost)}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        kpiContainer.innerHTML = kpiHTML || '<div class="col-span-3 text-center text-slate-400 italic py-4">Belum ada data kontrak.</div>';
+    }
+
+    // --- Filter for search ---
     const filtered = networkContracts.filter(c => {
         if (!term) return true;
         return (c.location && c.location.toLowerCase().includes(term)) ||
                (c.provider && c.provider.toLowerCase().includes(term)) ||
-               (c.contractNo && c.contractNo.toLowerCase().includes(term));
+               (c.contractNo && c.contractNo.toLowerCase().includes(term)) ||
+               (c.user && c.user.toLowerCase().includes(term));
     });
-
-    // Calculate Totals for Summary Cards (based on active status)
-    let totalActive = 0;
-    let totalMonthly = 0;
-    let totalAnnual = 0;
-
-    networkContracts.forEach(c => {
-        if (c.status !== 'Terminated') {
-            totalActive++;
-            totalMonthly += (parseFloat(c.monthlyCost) || 0);
-            totalAnnual += (parseFloat(c.annualCost) || 0);
-        }
-    });
-
-    const elActive = document.getElementById('billing-total-active');
-    const elMonthly = document.getElementById('billing-total-monthly');
-    const elAnnual = document.getElementById('billing-total-annual');
-
-    if (elActive) elActive.innerText = totalActive;
-    if (elMonthly) elMonthly.innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalMonthly);
-    if (elAnnual) elAnnual.innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAnnual);
 
     if(filtered.length === 0) {
         list.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400 italic">Tidak ada data kontrak.</td></tr>';
         return;
     }
 
+    let html = '';
     filtered.forEach(c => {
-        const mCostFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(c.monthlyCost || 0);
-        const yCostFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(c.annualCost || 0);
+        const monthlyCost = parseFloat(c.monthlyCost) || 0;
+        const mCostFmt = fmtCurrency(monthlyCost);
+        
+        // Running cost for this contract in the selected year
+        const activeMonths = calcActiveMonths(c, selectedYear);
+        const runningCost = monthlyCost * activeMonths;
+        const rCostFmt = fmtCurrency(runningCost);
+        const monthsLabel = activeMonths + ' bln';
         
         const startFmt = c.startDate ? new Date(c.startDate).toLocaleDateString('id-ID') : '?';
         const expiryFmt = c.expiryDate ? new Date(c.expiryDate).toLocaleDateString('id-ID') : '?';
@@ -361,7 +504,10 @@ function renderContractTable() {
                     <div class="text-xs text-slate-700 mt-1">Billing: <span class="font-mono bg-slate-100 px-1 rounded">${c.billingNo}</span></div>
                 </td>
                 <td class="p-4 font-semibold text-slate-700">${mCostFmt}</td>
-                <td class="p-4 font-bold text-slate-800">${yCostFmt}</td>
+                <td class="p-4">
+                    <div class="font-bold text-slate-800">${rCostFmt}</div>
+                    <div class="text-[10px] text-slate-400">${monthsLabel}</div>
+                </td>
                 <td class="p-4">${masaKontrak}</td>
                 <td class="p-4">${statusBadge}</td>
                 <td class="p-4 text-center">

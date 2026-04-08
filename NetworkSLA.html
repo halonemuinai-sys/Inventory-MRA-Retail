@@ -48,34 +48,42 @@
 
     <!-- TAB 2: CONTRACT & BILLING -->
     <div id="content-contract-billing" class="hidden animate-fade-in">
-        <!-- Summary Cards for Billing -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-file-contract"></i>
+        <!-- Year Filter & Status Summary -->
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+            <div class="flex items-center gap-2">
+                <label class="text-sm font-semibold text-slate-600">Tahun Berjalan:</label>
+                <select id="contract-year-filter" title="Pilih Tahun" onchange="renderContractTable()" class="border border-slate-200 rounded p-1 text-sm outline-none focus:border-brand-500">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+                <div class="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-bold border border-green-100">
+                    <i class="fa-solid fa-circle-check"></i> Aktif: <span id="billing-total-active">0</span>
                 </div>
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Kontrak Aktif</p>
-                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-active">0</h4>
+                <div class="flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-full font-bold border border-red-100">
+                    <i class="fa-solid fa-circle-xmark"></i> Diputus: <span id="billing-total-terminated">0</span>
                 </div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-money-bill-wave"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Cost Bulanan</p>
-                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-monthly">Rp 0</h4>
-                </div>
+        </div>
+
+        <!-- Per-Company / Pemakai KPI Cards -->
+        <div id="company-kpi-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Grand Total Bar -->
+        <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-xl p-4 mb-6 flex flex-wrap justify-between items-center gap-4 text-white shadow-lg shadow-brand-600/20">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider opacity-80">Total Cost Berjalan <span id="billing-year-label" class="opacity-60"></span></p>
+                <h3 class="text-2xl font-extrabold mt-1" id="billing-grand-running">Rp 0</h3>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-calendar-check"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Estimasi Cost Tahunan</p>
-                    <h4 class="text-xl font-bold text-slate-800" id="billing-total-annual">Rp 0</h4>
-                </div>
+            <div class="text-right">
+                <p class="text-xs font-bold uppercase tracking-wider opacity-80">Total Cost Bulanan (Aktif)</p>
+                <h3 class="text-2xl font-extrabold mt-1" id="billing-grand-monthly">Rp 0</h3>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold uppercase tracking-wider opacity-80">Estimasi Full Tahun (Aktif)</p>
+                <h3 class="text-2xl font-extrabold mt-1" id="billing-grand-annual">Rp 0</h3>
             </div>
         </div>
 
@@ -101,7 +109,7 @@
                             <th class="p-4 border-b">Perusahaan Penyedia (ISP)</th>
                             <th class="p-4 border-b">Nomor Kontrak & Billing</th>
                             <th class="p-4 border-b">Cost Bulanan</th>
-                            <th class="p-4 border-b">Cost Tahunan</th>
+                            <th class="p-4 border-b">Cost Berjalan</th>
                             <th class="p-4 border-b">Masa Kontrak</th>
                             <th class="p-4 border-b">Status</th>
                             <th class="p-4 border-b text-center">Aksi</th>
@@ -153,6 +161,8 @@
                         <option value="Head Office Wisma MRA">Head Office Wisma MRA</option>
                         <option value="Bvlgari Plaza Indonesia">Bvlgari Plaza Indonesia</option>
                         <option value="Bvlgari Plaza Senayan">Bvlgari Plaza Senayan</option>
+                        <option value="Kiehls Plaza Indonesia">Kiehls Plaza Indonesia</option>
+                        <option value="Warehouse & Office Wiggle Wiggle">Warehouse & Office Wiggle Wiggle</option>
                     </select>
                 </div>
 
@@ -196,6 +206,8 @@
                              <option value="Head Office Wisma MRA">Head Office Wisma MRA</option>
                              <option value="Bvlgari Plaza Indonesia">Bvlgari Plaza Indonesia</option>
                              <option value="Bvlgari Plaza Senayan">Bvlgari Plaza Senayan</option>
+                             <option value="Kiehls Plaza Indonesia">Kiehls Plaza Indonesia</option>
+                             <option value="Warehouse & Office Wiggle Wiggle">Warehouse & Office Wiggle Wiggle</option>
                         </select>
                     </div>
                     <div class="col-span-2 md:col-span-1">

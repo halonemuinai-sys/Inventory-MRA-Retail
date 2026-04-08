@@ -29,13 +29,29 @@ function assignAssetToEmployee(employeeId, assetId) {
 /**
  * Calculate cost analysis by company and month
  */
-function calculateCostAnalysis(year) {
+function calculateCostAnalysis(year, deviceType) {
   const inventory = getData('Inventory');
   const selectedYear = year || new Date().getFullYear();
   let analysis = {};
 
+  // Define category filters
+  const laptopCategories = ['', 'PC/Laptop', 'Laptop'];
+  const mobileCategories = ['Mobile Device', 'Tablet', 'Smartphone'];
+
   inventory.forEach(item => {
     if (String(item.type).toLowerCase() === 'sewa') {
+      // Filter by deviceType if specified
+      const cat = String(item.deviceCategory || '').trim();
+      
+      if (deviceType === 'Laptop') {
+        // Only include laptop/PC items (empty category = legacy laptop data)
+        if (!laptopCategories.includes(cat)) return;
+      } else if (deviceType === 'Mobile') {
+        // Only include mobile items
+        if (!mobileCategories.includes(cat)) return;
+      }
+      // If no deviceType specified, include all (backward compatible)
+
       const company = item.company || 'Unassigned';
       if (!analysis[company]) analysis[company] = new Array(12).fill(0);
 

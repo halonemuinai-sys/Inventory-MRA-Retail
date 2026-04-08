@@ -2,11 +2,12 @@
     // --- INITIALIZATION ---
 
 
-    let inventoryData = [], otherDeviceData = [], employeeData = [], masterData = [], configData = [], costAnalysisData = {}, gisLocations = [];
+    let inventoryData = [], otherDeviceData = [], employeeData = [], masterData = [], configData = [], costAnalysisData = {}, mobileCostAnalysisData = {}, gisLocations = [];
     let activeCompany = 'Global';
     let selectedGlobalYear = new Date().getFullYear();
     let chartInstanceCombined = null;
     let chartInstanceCostAnalysis = null;
+    let chartInstanceMobileCost = null;
     let currentUser = null;
 
     // Auto-login check
@@ -140,6 +141,7 @@
             employeeData = data.employees;
             configData = data.config;
             costAnalysisData = data.costAnalysis;
+            mobileCostAnalysisData = data.costAnalysisMobile || {};
             window.saasData = data.saas || [];
             window.networkContractsData = data.networkContracts || [];
             window.networkSLAsCached = data.networkSLAs || [];
@@ -185,6 +187,7 @@
             }
             if (typeof initSaaS === 'function') initSaaS();
             if (typeof initNetworkSLA === 'function') initNetworkSLA();
+            if (typeof renderMobileCostTable === 'function') renderMobileCostTable();
 
             showLoading(false);
         }).apiGetAllData(selectedGlobalYear);
@@ -333,7 +336,12 @@
             costAnalysisData = costs; 
             updateDashboard(); 
             renderCostTable(); 
-            showLoading(false); 
+            // Also fetch mobile cost analysis
+            google.script.run.withSuccessHandler(mobileCosts => {
+                mobileCostAnalysisData = mobileCosts || {};
+                if (typeof renderMobileCostTable === 'function') renderMobileCostTable();
+                showLoading(false); 
+            }).withFailureHandler(() => { showLoading(false); }).apiRunMobileCostAnalysis(selectedGlobalYear);
         }).apiRunCostAnalysis(selectedGlobalYear); 
     }
     function changeCostYear(year) { changeGlobalYear(year); }
@@ -353,6 +361,8 @@
         renderRentalReport(); // Update Rental Report
         if(typeof renderRentalSpecTable === 'function') renderRentalSpecTable();
         if(typeof renderCompanyBudgetTable === 'function') renderCompanyBudgetTable();
+        renderMobileDeviceTable();
+        if(typeof renderMobileCostTable === 'function') renderMobileCostTable();
         populateCompanySelector();
     }
     function updateDashboard() {
@@ -820,7 +830,6 @@
             }
         };
         fill('form-brand', 'Brand');
-        fill('mob-form-brand', 'Brand');
         fill('form-processor', 'Processor');
 
         // Populate Datalist for Other Device Brand
@@ -833,11 +842,8 @@
             });
         }
         fill('form-ram', 'RAM');
-        fill('mob-form-ram', 'RAM');
         fill('form-storage', 'Storage');
-        fill('mob-form-storage', 'Storage');
         fill('form-os', 'OS');
-        fill('mob-form-os', 'OS');
         fill('form-office', 'Office');
         fill('form-dept', 'Department');
     }
@@ -1161,6 +1167,9 @@
         
         inventoryData.forEach(item => {
             if (item.type !== 'Sewa') return;
+            // Only count laptop/PC devices
+            const cat = (item.deviceCategory || '').trim();
+            if (['Mobile Device', 'Tablet', 'Smartphone'].includes(cat)) return;
             const company = item.company || 'Unassigned';
             
             const cost = parseInt(item.rentalCost) || 0;
@@ -1366,6 +1375,9 @@
         const filtered = inventoryData.filter(item => {
             if (item.type !== 'Sewa') return false;
             if (item.company !== company) return false;
+            // Only laptop/PC devices
+            const cat = (item.deviceCategory || '').trim();
+            if (['Mobile Device', 'Tablet', 'Smartphone'].includes(cat)) return false;
             
             const cost = parseInt(item.rentalCost) || 0;
             if (cost <= 0) return false;
@@ -1821,8 +1833,8 @@
             const matchesType = filterType === '' || item.type === filterType;
             const matchesStatus = filterStatus === '' || item.status === filterStatus;
             
-            // EXACT MATCH FOR MOBILE DEVICE CATEGORY
-            const isMobileAsset = item.deviceCategory === 'Mobile Device';
+            // MATCH FOR MOBILE DEVICE CATEGORIES
+            const isMobileAsset = ['Mobile Device', 'Tablet', 'Smartphone'].includes(item.deviceCategory);
             
             return matchCompany && matchesSearch && matchesType && matchesStatus && isMobileAsset;
         });
@@ -1831,8 +1843,9 @@
         else document.getElementById('mob-empty-msg').classList.add('hidden');
 
         filtered.forEach(item => {
-            const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
+            const specsLine1 = [item.ram, item.storage].filter(Boolean).join(' / ') || '-';
             const specsLine2 = `OS: ${item.os || '-'}`;
+            const colorInfo = item.processor ? `<div class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-palette mr-1"></i>${item.processor}</div>` : '';
 
             let statusBadge = '';
             if (item.status === 'Available') statusBadge = `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold border border-emerald-200"><i class="fa-solid fa-check"></i> Tersedia</span>`;
@@ -1852,7 +1865,11 @@
             if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
 
             const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editMobileDevice('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`;
-            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+            const categoryLabel = item.deviceCategory === 'Tablet' ? 
+                `<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-100 font-bold ml-2">TABLET</span>` : 
+                (item.deviceCategory === 'Smartphone' ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-bold ml-2">HP</span>` : '');
+
+            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="flex items-center"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div>${categoryLabel}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div>${colorInfo}</td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
         });
     }
 
@@ -1986,4 +2003,191 @@
             google.script.run.withSuccessHandler(successHandler).apiAddInventory(data);
         }
     }
+
+    // --- MOBILE DEVICE COST ANALYSIS ---
+
+    function renderMobileKPI() {
+        const mobileItems = inventoryData.filter(i => ['Mobile Device', 'Tablet', 'Smartphone'].includes(i.deviceCategory));
+        const filtered = activeCompany === 'Global' ? mobileItems : mobileItems.filter(i => i.company === activeCompany);
+
+        let totalSmartphone = 0, totalTablet = 0, totalSewaBulanan = 0, sewaSmartphone = 0, sewaTablet = 0;
+        filtered.forEach(item => {
+            if (item.deviceCategory === 'Smartphone') { totalSmartphone++; if(item.type === 'Sewa') sewaSmartphone++; }
+            else { totalTablet++; if(item.type === 'Sewa') sewaTablet++; }
+            if (item.type === 'Sewa') totalSewaBulanan += (parseInt(item.rentalCost) || 0);
+        });
+
+        let totalYTD = 0;
+        Object.keys(mobileCostAnalysisData).forEach(comp => {
+            if (activeCompany !== 'Global' && comp !== activeCompany) return;
+            totalYTD += (mobileCostAnalysisData[comp] || []).reduce((a, b) => a + b, 0);
+        });
+
+        const fmtCurrency = (v) => 'Rp ' + v.toLocaleString('id-ID');
+        const el = document.getElementById('mob-kpi-container');
+        if (!el) return;
+        el.innerHTML = `
+            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Total Smartphone</p>
+                    <h3 class="text-xl font-bold text-blue-700">${totalSmartphone}</h3>
+                    <p class="text-[10px] text-blue-400 mt-0.5">${sewaSmartphone} sewa · ${totalSmartphone - sewaSmartphone} kantor</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-4 border border-purple-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">Total Tablet</p>
+                    <h3 class="text-xl font-bold text-purple-700">${totalTablet}</h3>
+                    <p class="text-[10px] text-purple-400 mt-0.5">${sewaTablet} sewa · ${totalTablet - sewaTablet} kantor</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fa-solid fa-tablet-screen-button"></i>
+                </div>
+            </div>
+            <div class="bg-orange-50 rounded-xl p-4 border border-orange-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1">Biaya Sewa / Bulan</p>
+                    <h3 class="text-lg font-bold text-orange-700">${fmtCurrency(totalSewaBulanan)}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                </div>
+            </div>
+            <div class="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-1">Cost YTD (${selectedGlobalYear})</p>
+                    <h3 class="text-lg font-bold text-emerald-700">${fmtCurrency(totalYTD)}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderMobileCostTable() {
+        const data = mobileCostAnalysisData;
+        const tbody = document.getElementById('mob-cost-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const budgetMobilePerCompany = {};
+        employeeData.forEach(emp => {
+            if(!budgetMobilePerCompany[emp.company]) budgetMobilePerCompany[emp.company] = 0;
+            budgetMobilePerCompany[emp.company] += (parseInt(emp.budgetMobile) || 0) * 12;
+        });
+
+        const mobileDevicesCount = {};
+        const yearStart = new Date(selectedGlobalYear, 0, 1);
+        const yearEnd = new Date(selectedGlobalYear, 11, 31);
+        
+        inventoryData.forEach(item => {
+            if (item.type !== 'Sewa') return;
+            const cat = (item.deviceCategory || '').trim();
+            if (!['Mobile Device', 'Tablet', 'Smartphone'].includes(cat)) return;
+            const company = item.company || 'Unassigned';
+            const cost = parseInt(item.rentalCost) || 0;
+            if (cost <= 0) return;
+            const assetStart = item.rentalStart ? new Date(item.rentalStart) : new Date(0);
+            if (assetStart > yearEnd) return;
+            if (item.rentalEnd) { if (new Date(item.rentalEnd) < yearStart) return; }
+            if(!mobileDevicesCount[company]) mobileDevicesCount[company] = 0;
+            mobileDevicesCount[company]++;
+        });
+
+        const monthlyTotals = new Array(12).fill(0);
+        let grandTotalAll = 0;
+        let totalValBudget = 0, totalValCost = 0;
+
+        const vbody = document.getElementById('mob-cost-validation-body');
+        if(vbody) vbody.innerHTML = '';
+
+        Object.keys(data).forEach(comp => {
+            if (activeCompany !== 'Global' && comp !== activeCompany) return;
+            const vals = data[comp];
+            vals.forEach((v, i) => monthlyTotals[i] += v);
+            const total = vals.reduce((a, b) => a + b, 0);
+            grandTotalAll += total;
+
+            const cells = vals.map(v => `<td class="p-2 border border-slate-100 text-xs text-right text-slate-600">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
+            tbody.innerHTML += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-purple-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
+
+            if(vbody) {
+                const budgetStr = budgetMobilePerCompany[comp] || 0;
+                const remaining = budgetStr - total;
+                totalValBudget += budgetStr;
+                totalValCost += total;
+                let statusBadge = '<span class="text-xs text-slate-400 font-bold">Unset</span>';
+                let barColor = 'bg-slate-200'; let percent = 0;
+                if (budgetStr > 0) {
+                    percent = Math.min((total / budgetStr) * 100, 100);
+                    statusBadge = total > budgetStr ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold border border-red-200">Over Budget</span>' : '<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] font-bold border border-emerald-200">Aman</span>';
+                    barColor = total > budgetStr ? 'bg-red-500' : 'bg-emerald-500';
+                } else if (total > 0) { statusBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] font-bold border border-yellow-200">No Budget</span>'; barColor = 'bg-yellow-500'; percent = 100; }
+                let remainingClass = remaining < 0 ? 'text-red-500 font-bold text-xs' : 'text-emerald-500 font-bold text-xs';
+                if (budgetStr === 0) remainingClass = 'text-slate-400 text-xs';
+                const deviceCount = mobileDevicesCount[comp] || 0;
+                vbody.innerHTML += `<tr class="hover:bg-purple-50/50 border-b border-slate-50 transition-colors"><td class="p-3 text-xs font-bold text-purple-600">${comp}</td><td class="p-3 text-xs font-mono text-slate-600 text-center">${deviceCount} Unit</td><td class="p-3 text-xs font-mono text-slate-600 text-right">${budgetStr > 0 ? 'Rp ' + budgetStr.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono text-slate-800 font-bold text-right">${total > 0 ? 'Rp ' + total.toLocaleString('id-ID') : '-'}</td><td class="p-3 font-mono text-right ${remainingClass}">${budgetStr > 0 ? (remaining < 0 ? '- Rp ' + Math.abs(remaining).toLocaleString('id-ID') : '+ Rp ' + remaining.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center">${statusBadge}</td><td class="p-3 pl-6 pr-4"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="${barColor} h-full" style="width: ${percent}%"></div></div><span class="text-[10px] text-slate-500 font-bold w-8 text-right">${Math.round(percent)}%</span></div></td></tr>`;
+            }
+        });
+
+        const totalCells = monthlyTotals.map(v => `<td class="p-2 border border-slate-200 text-xs text-right font-bold text-slate-900 bg-slate-100">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
+        tbody.innerHTML += `<tr class="border-t-2 border-slate-300"><td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>${totalCells}<td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-white bg-purple-700">${grandTotalAll.toLocaleString('id-ID')}</td></tr>`;
+
+        if(vbody && activeCompany === 'Global') {
+            const totR = totalValBudget - totalValCost;
+            const totalD = Object.values(mobileDevicesCount).reduce((a, b) => a + b, 0);
+            let pT = 0; if (totalValBudget > 0) pT = Math.min((totalValCost / totalValBudget) * 100, 100);
+            vbody.innerHTML += `<tr class="bg-slate-50 border-t-2 border-slate-200"><td class="p-3 text-xs font-extrabold text-slate-900">GRAND TOTAL</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-center">${totalD} Unit</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValBudget > 0 ? 'Rp ' + totalValBudget.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValCost > 0 ? 'Rp ' + totalValCost.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-right ${totR < 0 ? 'text-red-600' : 'text-emerald-600'}">${totalValBudget > 0 ? (totR < 0 ? '- Rp ' + Math.abs(totR).toLocaleString('id-ID') : '+ Rp ' + totR.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center"></td><td class="p-3 pl-6 pr-4 text-right text-[11px] font-bold text-slate-600">${Math.round(pT)}% Used</td></tr>`;
+        }
+
+        if (typeof renderMobileCostChart === 'function') renderMobileCostChart(monthlyTotals);
+        if (typeof renderMobileKPI === 'function') renderMobileKPI();
+    }
+
+    function renderMobileCostChart(monthlyTotals) {
+        const ctx = document.getElementById('mob-cost-chart');
+        if (!ctx) return;
+        if (chartInstanceMobileCost) chartInstanceMobileCost.destroy();
+        chartInstanceMobileCost = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'],
+                datasets: [{
+                    label: 'Biaya Sewa Mobile (Rp)',
+                    data: monthlyTotals,
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    borderWidth: 2, pointBackgroundColor: '#fff', pointBorderColor: '#7c3aed',
+                    pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#e2e8f0' },
+                        ticks: { callback: function(v) { if (v >= 1000000) return (v/1000000)+' Jt'; if (v >= 1000) return (v/1000)+'k'; return v; }, font: { size: 10 }, color: '#64748b' }, border: { display: false } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#64748b' }, border: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: '#1e293b', callbacks: { label: function(c) { return 'Rp ' + c.raw.toLocaleString('id-ID'); } } }
+                }
+            }
+        });
+    }
+
+    function updateEmployeeBudgetMobile(empId, value) {
+        const cleanValue = parseInt(value.replace(/\D/g, '')) || 0;
+        const emp = employeeData.find(e => e.id === empId);
+        if (!emp) return;
+        emp.budgetMobile = cleanValue;
+        google.script.run.withSuccessHandler(() => {
+            if (typeof renderMobileCostTable === 'function') renderMobileCostTable();
+        }).withFailureHandler(() => { alert("Gagal menyimpan budget mobile."); }).apiUpdateEmployee({ id: empId, budgetMobile: cleanValue });
+    }
+
 </script>
