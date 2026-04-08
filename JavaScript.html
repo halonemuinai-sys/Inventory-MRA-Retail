@@ -160,6 +160,7 @@
             populateYearDropdown('rental-year');
             populateYearDropdown('cb-year-select');
             populateYearDropdown('hd-report-year');
+            populateYearDropdown('mobile-year-select');
             populateCompanySelector();
             if (typeof initOnboardingForm === 'function') initOnboardingForm();
 
@@ -326,8 +327,10 @@
         const d1 = document.getElementById('dash-year-select'); 
         const d2 = document.getElementById('cost-year-select'); 
         const d3 = document.getElementById('sla-year-filter');
+        const d4 = document.getElementById('mobile-year-select');
         if (d1) d1.value = selectedGlobalYear; 
         if (d2) d2.value = selectedGlobalYear; 
+        if (d4) d4.value = selectedGlobalYear;
         if (d3) {
             d3.value = selectedGlobalYear;
             if (typeof renderSLATable === 'function') renderSLATable();
@@ -346,6 +349,7 @@
         }).apiRunCostAnalysis(selectedGlobalYear); 
     }
     function changeCostYear(year) { changeGlobalYear(year); }
+    function changeMobileYear(year) { changeGlobalYear(year); }
     function handleCompanySwitch(val) {
         activeCompany = val;
         const label = activeCompany === 'Global' ? '(Global)' : `(${activeCompany})`;
