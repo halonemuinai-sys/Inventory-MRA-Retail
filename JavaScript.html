@@ -96,7 +96,8 @@
             'nav-bulk-import', 'nav-employees', 'nav-budgeting', 'nav-company-budget-view', 
             'nav-cost', 'nav-config', 'head-admin', 'head-legacy-helpdesk', 'nav-ticket-support',
             'nav-ticket-summary', 'head-it-helpdesk', 'nav-helpdesk-input', 'nav-helpdesk-list',
-            'nav-helpdesk-dashboard', 'nav-helpdesk-report', 'nav-saas', 'nav-network-sla'
+            'nav-helpdesk-dashboard', 'nav-helpdesk-report', 'nav-saas', 'nav-network-sla',
+            'nav-mobile-summary'
         ];
         allElements.forEach(show);
 
@@ -1829,7 +1830,7 @@
 
         const filtered = inventoryData.filter(item => {
             const matchCompany = activeCompany === 'Global' || item.company === activeCompany;
-            const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search)) || (item.model && item.model.toLowerCase().includes(search));
+            const matchesSearch = !search || (item.brand || '').toLowerCase().includes(search) || (item.serial || '').toLowerCase().includes(search) || (item.model || '').toLowerCase().includes(search) || (item.assignedTo || '').toLowerCase().includes(search);
             const matchesType = filterType === '' || item.type === filterType;
             const matchesStatus = filterStatus === '' || item.status === filterStatus;
             
