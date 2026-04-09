@@ -8,12 +8,13 @@
         // Save current selection if re-populating
         const currentVal = sel.value;
 
-        sel.innerHTML = '<option value="" disabled selected>-- Pilih Pelapor --</option>';
+        let html = '<option value="" disabled selected>-- Pilih Pelapor --</option>';
         if (typeof employeeData !== 'undefined') {
             employeeData.sort((a, b) => a.name.localeCompare(b.name)).forEach(emp => {
-                sel.innerHTML += `<option value="${emp.id}">${emp.name} (${emp.department})</option>`;
+                html += `<option value="${emp.id}">${emp.name} (${emp.department})</option>`;
             });
         }
+        sel.innerHTML = html;
 
         if (currentVal) sel.value = currentVal;
     }
@@ -193,6 +194,7 @@
             return 0; // Keep date sort from backend
         });
 
+        let htmlRows = '';
         tickets.forEach(t => {
             const isResolved = t.status === 'Resolved' || t.status === 'Closed';
             const statusColor = isResolved ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : 'bg-orange-100 text-orange-600 border-orange-200';
@@ -206,7 +208,7 @@
 
             const assetInfo = t.assetName ? `<div class="text-[10px] text-slate-500 mt-1"><i class="fa-solid fa-laptop text-slate-400 mr-1"></i> ${t.assetName}</div>` : '';
 
-            listContainer.innerHTML += `
+            htmlRows += `
                 <div class="bg-white border border-slate-100 rounded-lg p-3 hover:shadow-md transition-shadow relative group ${opacity}">
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-[10px] font-mono text-slate-400">#${t.id ? t.id.substring(0, 8) : 'ID'} • ${t.ticketDate}</span>
@@ -215,7 +217,6 @@
                         </span>
                     </div>
                     <h4 class="font-bold text-slate-700 text-sm mb-1">${t.subject}</h4>
-                    <!-- <p class="text-xs text-slate-500 line-clamp-2">${t.description}</p> -->
                     
                     ${assetInfo}
 
@@ -233,6 +234,7 @@
                     </div>
                 </div>`;
         });
+        listContainer.innerHTML = htmlRows;
     }
 
     function updateTicketBadge(tickets) {
