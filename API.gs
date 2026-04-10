@@ -21,7 +21,8 @@
       helpdeskTickets: getData('HelpdeskTickets'),
       saas: getData('SaaS_Licenses'),
       networkSLAs: getData('Network_SLA'),
-      networkContracts: getData('Network_Contracts')
+      networkContracts: getData('Network_Contracts'),
+      projects: getData('Projects')
     };
   }
 
@@ -524,4 +525,22 @@
 
   function apiDeleteNetworkContract(id) {
     return deleteRow('Network_Contracts', id);
+  }
+  // --- Project Management APIs ---
+
+  function apiGetProjects() {
+    return getData('Projects');
+  }
+
+  function apiAddProject(data) {
+    if (!data.id) { data.id = Utilities.getUuid(); }
+    return addRow('Projects', data);
+  }
+
+  function apiUpdateProject(data) {
+    return updateRow('Projects', data.id, data);
+  }
+
+  function apiDeleteProject(id) {
+    return deleteRow('Projects', id);
   }

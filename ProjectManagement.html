@@ -1,0 +1,266 @@
+<!-- PROJECT MANAGEMENT VIEW -->
+<section id="project-management" class="page-section hidden animate-fade-in">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">Setup & Biaya Project</h2>
+            <p class="text-slate-500 text-sm">Kelola identitas project baru dan rincian biaya instalasi lengkap (Internet, CCTV, dll)</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openProjectModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-4 rounded shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> <span>Input Project</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter & Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="project-stats-container">
+        <!-- Diisi oleh JavaScript secara dinamis -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 relative overflow-hidden">
+             <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full opacity-50"></div>
+             <div class="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Total Project Active</div>
+             <div class="text-2xl font-black text-slate-800" id="stat-project-active">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 relative overflow-hidden">
+             <div class="absolute -right-4 -top-4 w-16 h-16 bg-purple-50 rounded-full opacity-50"></div>
+             <div class="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Project Completed</div>
+             <div class="text-2xl font-black text-slate-800" id="stat-project-completed">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 relative overflow-hidden">
+             <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 rounded-full opacity-50"></div>
+             <div class="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Total Biaya Setup</div>
+             <div class="text-2xl font-black text-slate-800" id="stat-project-total-cost">-</div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="project-search" placeholder="Cari nama project, lokasi..." class="pl-9 pr-4 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 w-64" oninput="renderProjectTable()">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="p-4 border-b min-w-[200px]">Project</th>
+                        <th class="p-4 border-b">Lokasi & Perusahaan</th>
+                        <th class="p-4 border-b text-center">Tanggal Target</th>
+                        <th class="p-4 border-b text-center">Status</th>
+                        <th class="p-4 border-b text-right">Total Biaya (Rp)</th>
+                        <th class="p-4 border-b text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="project-table-body" class="text-sm divide-y divide-slate-100">
+                    <!-- Rows will be populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- PROJECT MODAL (Besar untuk mengakomodir Form Lebar/Tab) -->
+<div id="project-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 animate-fade-in px-4 py-6">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[95vh] md:h-auto md:max-h-[85vh]">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800" id="project-modal-title">Input Project & Biaya Setup</h3>
+            <button type="button" onclick="closeProjectModal()" class="text-slate-400 hover:text-red-500" title="Tutup Modal"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        
+        <div class="p-4 flex gap-2 overflow-x-auto border-b border-slate-100 text-sm bg-slate-50/50">
+            <button type="button" onclick="switchProjectTab('tab-proj-basic')" class="project-tab-btn active font-bold text-brand-600 px-3 py-1.5 rounded-lg bg-brand-50 whitespace-nowrap">Identitas Project</button>
+            <button type="button" onclick="switchProjectTab('tab-proj-internet')" class="project-tab-btn text-slate-500 hover:text-brand-600 px-3 py-1.5 rounded-lg whitespace-nowrap">Biaya Internet</button>
+            <button type="button" onclick="switchProjectTab('tab-proj-pc')" class="project-tab-btn text-slate-500 hover:text-brand-600 px-3 py-1.5 rounded-lg whitespace-nowrap">Biaya People Counting</button>
+            <button type="button" onclick="switchProjectTab('tab-proj-cctv')" class="project-tab-btn text-slate-500 hover:text-brand-600 px-3 py-1.5 rounded-lg whitespace-nowrap">Biaya CCTV</button>
+            <button type="button" onclick="switchProjectTab('tab-proj-total')" class="project-tab-btn font-bold text-orange-600 px-3 py-1.5 rounded-lg whitespace-nowrap"><i class="fa-solid fa-calculator mr-1"></i> Grand Total</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1 bg-slate-50/30">
+            <form id="project-form" onsubmit="handleSaveProject(event)">
+                <input type="hidden" id="proj-id" name="id">
+                
+                <!-- TAB 1: BASIC INFO -->
+                <div id="tab-proj-basic" class="project-tab-content">
+                    <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2"><i class="fa-regular fa-building mr-2"></i>Informasi Dasar</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Project <span class="text-red-500">*</span></label>
+                            <input type="text" name="projectName" id="proj-name" required placeholder="Ex: Pembukaan Toko Bali" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Perusahaan / Merek <span class="text-red-500">*</span></label>
+                            <select name="company" id="proj-company" title="proj-company" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                                <!-- JS akan isi via populateCompanyFilter() dsb atau manual -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Lokasi <span class="text-red-500">*</span></label>
+                            <input type="text" name="location" id="proj-location" required placeholder="Ex: Bali TSM" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status Project <span class="text-red-500">*</span></label>
+                            <select name="status" id="proj-status" title="proj-status" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none bg-white">
+                                <option value="Planning">Planning</option>
+                                <option value="On Progress">On Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal Mulai <span class="text-red-500">*</span></label>
+                            <input type="date" name="startDate" id="proj-start-date" title="proj-start-date" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal Target Selesai <span class="text-red-500">*</span></label>
+                            <input type="date" name="targetDate" id="proj-target-date" title="proj-target-date" required class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Catatan Tambahan</label>
+                        <textarea name="notes" id="proj-notes" rows="2" class="w-full p-2 border border-slate-200 rounded text-sm focus:border-brand-500 outline-none" placeholder="Opsional"></textarea>
+                    </div>
+                </div>
+
+                <!-- TAB 2: INTERNET -->
+                <div id="tab-proj-internet" class="project-tab-content hidden">
+                    <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2"><i class="fa-solid fa-wifi mr-2"></i>Biaya Setup Internet & Jaringan</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Installasi & Aktivas</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="netInstallCost" id="proj-net-install" title="proj-net-install" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Pengadaan Modem / Router</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="netModemCost" id="proj-net-modem" title="proj-net-modem" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1 text-brand-600">Tarif Bulanan</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="netMonthlyCost" id="proj-net-monthly" value="0" oninput="formatCurrency(this); calculateProjTotal()" title="Harap masukkan tarif bulanan, ini hanya sebagai info bulanan" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PEOPLE COUNTING -->
+                <div id="tab-proj-pc" class="project-tab-content hidden">
+                    <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2"><i class="fa-solid fa-users-viewfinder mr-2"></i>Biaya People Counting</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga Device Pembaca</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="pcDeviceCost" id="proj-pc-device" title="proj-pc-device" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Installasi Hardware</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="pcInstallCost" id="proj-pc-install" title="proj-pc-install" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1 text-brand-600">Biaya Langganan (Tahunan)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="pcSubCost" id="proj-pc-sub" title="proj-pc-sub" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Alat Tambahan / Kabel</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="pcOtherCost" id="proj-pc-other" title="proj-pc-other" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: CCTV -->
+                <div id="tab-proj-cctv" class="project-tab-content hidden">
+                    <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2"><i class="fa-solid fa-video mr-2"></i>Biaya CCTV & Keamanan</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga Unit Kamera (Total)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="cctvCamCost" id="proj-cctv-cam" title="proj-cctv-cam" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga NVR / Penyimpanan</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="cctvNvrCost" id="proj-cctv-nvr" title="proj-cctv-nvr" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga Hub / Switch Jaringan</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="cctvSwitchCost" id="proj-cctv-switch" title="proj-cctv-switch" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Installasi & Tenaga</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="cctvInstallCost" id="proj-cctv-install" title="proj-cctv-install" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya Tambahan Lainnya</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="cctvOtherCost" id="proj-cctv-other" title="proj-cctv-other" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: TOTAL SUMMARY -->
+                <div id="tab-proj-total" class="project-tab-content hidden">
+                    <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2"><i class="fa-solid fa-money-bill-wave mr-2"></i>Rangkuman Biaya Setup</h4>
+                    <div class="bg-indigo-50/50 p-6 rounded-xl border border-indigo-100/50">
+                        <!-- Lain-lain -->
+                        <div class="mb-6">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pengadaan / Setup Lainnya (Jika ada)</label>
+                            <div class="relative max-w-sm">
+                                <span class="absolute left-3 top-2 text-slate-400 text-sm">Rp</span>
+                                <input type="text" name="otherCost" id="proj-other-cost" title="proj-other-cost" value="0" oninput="formatCurrency(this); calculateProjTotal()" class="w-full pl-8 p-2 border border-slate-200 rounded text-sm font-mono focus:border-brand-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-end border-t border-indigo-200 pt-4">
+                            <div>
+                                <h5 class="text-sm font-bold text-indigo-900">GRAND TOTAL BIAYA SETUP</h5>
+                                <p class="text-[11px] text-indigo-500">Estimasi total capex/opex di luar biaya internet bulanan</p>
+                            </div>
+                            <div class="text-3xl font-black text-indigo-700" id="proj-grand-total-display">
+                                Rp 0
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="totalCost" id="proj-total-cost" value="0">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-6 mt-6 border-t border-slate-100">
+                    <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded hover:bg-slate-200 transition-colors">Tutup</button>
+                    <button type="submit" id="btn-save-project" class="px-6 py-2 text-sm font-bold text-white bg-brand-600 rounded hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/30 flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan Data Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

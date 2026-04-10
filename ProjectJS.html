@@ -1,0 +1,316 @@
+<script>
+    // --- PROJECT MANAGEMENT LOGIC ---
+    let projectData = [];
+
+    function initProjectForm() {
+        populateProjectCompanyDropdown();
+        // default to basic info tab
+        switchProjectTab('tab-proj-basic');
+    }
+
+    function populateProjectCompanyDropdown() {
+        const sel = document.getElementById('proj-company');
+        if (!sel) return;
+        
+        // Aggregate companies globally
+        let companies = new Set();
+        if(typeof masterData !== 'undefined') masterData.filter(m => m.category === 'Company').forEach(m => companies.add(m.value));
+        if(typeof inventoryData !== 'undefined') inventoryData.forEach(i => companies.add(i.company));
+        if(typeof employeeData !== 'undefined') employeeData.forEach(e => companies.add(e.company));
+
+        sel.innerHTML = '<option value="" disabled selected>-- Pilih Perusahaan --</option>';
+        [...companies].sort().forEach(c => {
+            if(c) sel.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+
+    function switchProjectTab(tabId) {
+        // Hide all tabs
+        document.querySelectorAll('.project-tab-content').forEach(el => el.classList.add('hidden'));
+        // Remove active styling from all buttons
+        document.querySelectorAll('.project-tab-btn').forEach(el => {
+            el.classList.remove('active', 'font-bold', 'text-brand-600', 'bg-brand-50');
+            el.classList.add('text-slate-500');
+            if(el.innerText.includes('Grand Total')) {
+                el.classList.remove('text-orange-600');
+            }
+        });
+
+        // Show selected tab
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        // Add active styling to clicked button
+        const btn = document.querySelector(`[onclick="switchProjectTab('${tabId}')"]`);
+        if (btn) {
+            btn.classList.add('active', 'font-bold', 'bg-brand-50');
+            btn.classList.remove('text-slate-500');
+            if(tabId === 'tab-proj-total') {
+                btn.classList.add('text-orange-600');
+                btn.classList.remove('text-brand-600');
+            } else {
+                btn.classList.add('text-brand-600');
+            }
+        }
+    }
+
+    function openProjectModal(id = null) {
+        document.getElementById('project-modal').classList.remove('hidden');
+        document.getElementById('project-modal').classList.add('flex');
+        document.getElementById('project-form').reset();
+        document.getElementById('proj-id').value = '';
+        document.getElementById('project-modal-title').innerText = "Input Project & Biaya Setup";
+        
+        initProjectForm();
+        calculateProjTotal();
+
+        if (id) {
+            document.getElementById('project-modal-title').innerText = "Edit Project";
+            const proj = projectData.find(p => p.id === id);
+            if (proj) {
+                document.getElementById('proj-id').value = proj.id;
+                document.getElementById('proj-name').value = proj.projectName || '';
+                document.getElementById('proj-company').value = proj.company || '';
+                document.getElementById('proj-location').value = proj.location || '';
+                document.getElementById('proj-status').value = proj.status || 'Planning';
+                document.getElementById('proj-start-date').value = proj.startDate || '';
+                document.getElementById('proj-target-date').value = proj.targetDate || '';
+                document.getElementById('proj-notes').value = proj.notes || '';
+
+                // Costs
+                document.getElementById('proj-net-install').value = (proj.netInstallCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-net-modem').value = (proj.netModemCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-net-monthly').value = (proj.netMonthlyCost || 0).toLocaleString('id-ID');
+                
+                document.getElementById('proj-pc-device').value = (proj.pcDeviceCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-pc-install').value = (proj.pcInstallCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-pc-sub').value = (proj.pcSubCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-pc-other').value = (proj.pcOtherCost || 0).toLocaleString('id-ID');
+
+                document.getElementById('proj-cctv-cam').value = (proj.cctvCamCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-cctv-nvr').value = (proj.cctvNvrCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-cctv-switch').value = (proj.cctvSwitchCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-cctv-install').value = (proj.cctvInstallCost || 0).toLocaleString('id-ID');
+                document.getElementById('proj-cctv-other').value = (proj.cctvOtherCost || 0).toLocaleString('id-ID');
+                
+                document.getElementById('proj-other-cost').value = (proj.otherCost || 0).toLocaleString('id-ID');
+                
+                calculateProjTotal();
+            }
+        }
+    }
+
+    function closeProjectModal() {
+        document.getElementById('project-modal').classList.add('hidden');
+        document.getElementById('project-modal').classList.remove('flex');
+    }
+
+    function calculateProjTotal() {
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const str = el.value.replace(/\./g, '');
+            return parseInt(str) || 0;
+        };
+
+        // Note: netMonthlyCost and pcSubCost are recurring, but usually CapEx tracks initial total install + 1st year/month depending on accounting. 
+        // We will include them in total as initially requested, or let the user decide. Usually, we just sum them all as setup cost here for simplicity unless specified otherwise.
+        const total = 
+            getVal('proj-net-install') + getVal('proj-net-modem') + 
+            getVal('proj-pc-device') + getVal('proj-pc-install') + getVal('proj-pc-sub') + getVal('proj-pc-other') +
+            getVal('proj-cctv-cam') + getVal('proj-cctv-nvr') + getVal('proj-cctv-switch') + getVal('proj-cctv-install') + getVal('proj-cctv-other') +
+            getVal('proj-other-cost');
+
+        document.getElementById('proj-total-cost').value = total;
+        document.getElementById('proj-grand-total-display').innerText = 'Rp ' + total.toLocaleString('id-ID');
+    }
+
+    function handleSaveProject(e) {
+        e.preventDefault();
+        showLoading(true);
+
+        const form = document.getElementById('project-form');
+        const formData = new FormData(form);
+        const dataObj = Object.fromEntries(formData.entries());
+
+        // Parse numerical costs
+        const costFields = ['netInstallCost', 'netModemCost', 'netMonthlyCost', 'pcInstallCost', 'pcDeviceCost', 'pcSubCost', 'pcOtherCost', 'cctvCamCost', 'cctvNvrCost', 'cctvSwitchCost', 'cctvInstallCost', 'cctvOtherCost', 'otherCost', 'totalCost'];
+        costFields.forEach(f => {
+            const valStr = dataObj[f] ? String(dataObj[f]).replace(/\./g, '') : "0";
+            dataObj[f] = parseInt(valStr) || 0;
+        });
+
+        const action = dataObj.id ? 'apiUpdateProject' : 'apiAddProject';
+        const msg = dataObj.id ? 'Project berhasil diperbarui.' : 'Project baru berhasil disimpan.';
+
+        google.script.run.withSuccessHandler(res => {
+            if(res.success) {
+                alert(msg);
+                closeProjectModal();
+                loadProjects(); // Reload explicitly instead of hard refreshData
+            } else {
+                showLoading(false);
+                alert("Gagal menyimpan project: " + res.message);
+            }
+        })[action](dataObj);
+    }
+
+    function deleteProject(id) {
+        if(!confirm("Anda yakin ingin menghapus data project ini?")) return;
+        showLoading(true);
+        google.script.run.withSuccessHandler(res => {
+            if(res.success) {
+                loadProjects();
+            } else {
+                showLoading(false);
+                alert("Gagal menghapus: " + res.message);
+            }
+        }).apiDeleteProject(id);
+    }
+
+    function loadProjects() {
+        showLoading(true);
+        google.script.run.withSuccessHandler(data => {
+            projectData = data || [];
+            if(typeof window.apiData !== 'undefined') window.apiData.projects = projectData; // update cache
+            renderProjectTable();
+            showLoading(false);
+        }).apiGetProjects();
+    }
+
+    function renderProjectTable() {
+        const tbody = document.getElementById('project-table-body');
+        if(!tbody) return;
+
+        const search = (document.getElementById('project-search').value || '').toLowerCase();
+        
+        let activeCount = 0;
+        let completedCount = 0;
+        let grandTotalAll = 0;
+
+        let filtered = projectData;
+        
+        // Filter globally if activeCompany is implemented here
+        if (typeof activeCompany !== 'undefined' && activeCompany !== 'Global') {
+            filtered = filtered.filter(p => p.company === activeCompany);
+        }
+
+        if (search) {
+            filtered = filtered.filter(p => 
+                (p.projectName || '').toLowerCase().includes(search) || 
+                (p.location || '').toLowerCase().includes(search) ||
+                (p.company || '').toLowerCase().includes(search)
+            );
+        }
+
+        let htmlRows = '';
+        filtered.forEach(p => {
+            if(p.status === 'Completed') completedCount++;
+            else if(p.status !== 'Cancelled') activeCount++;
+
+            grandTotalAll += (Number(p.totalCost) || 0);
+
+            let statusBadge = '';
+            if (p.status === 'Completed') statusBadge = `<span class="px-2 py-1 rounded bg-emerald-100 text-emerald-600 text-[10px] font-bold"><i class="fa-solid fa-check mr-1"></i>Selesai</span>`;
+            else if (p.status === 'On Progress') statusBadge = `<span class="px-2 py-1 rounded bg-blue-100 text-blue-600 text-[10px] font-bold"><i class="fa-solid fa-person-digging mr-1"></i>Berjalan</span>`;
+            else if (p.status === 'Cancelled') statusBadge = `<span class="px-2 py-1 rounded bg-red-100 text-red-600 text-[10px] font-bold"><i class="fa-solid fa-xmark mr-1"></i>Batal</span>`;
+            else statusBadge = `<span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold">${p.status || 'Planning'}</span>`;
+
+            const totalRp = (Number(p.totalCost) || 0).toLocaleString('id-ID');
+
+            htmlRows += `
+                <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 group">
+                    <td class="p-4 align-top">
+                        <div class="font-bold text-slate-800 text-sm">${p.projectName || '-'}</div>
+                        <div class="text-[10px] text-slate-400 mt-1"><i class="fa-solid fa-calendar mr-1"></i> Start: ${p.startDate || '-'}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="text-xs font-bold text-indigo-700">${p.location || '-'}</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">${p.company || '-'}</div>
+                    </td>
+                    <td class="p-4 align-top text-center">
+                        <div class="text-xs text-slate-700">${p.targetDate || '-'}</div>
+                    </td>
+                    <td class="p-4 align-top text-center">${statusBadge}</td>
+                    <td class="p-4 align-top text-right">
+                        <div class="font-mono text-sm font-bold text-slate-700">Rp ${totalRp}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="flex items-center justify-center gap-2">
+                             <button onclick="openProjectModal('${p.id}')" class="w-7 h-7 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs transition border border-blue-100" title="Edit Rincian"><i class="fa-solid fa-pen"></i></button>
+                             <button onclick="printProjectReport('${p.id}')" class="w-7 h-7 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs transition border border-indigo-100" title="Print Laporan"><i class="fa-solid fa-print"></i></button>
+                             <button onclick="deleteProject('${p.id}')" class="w-7 h-7 rounded bg-red-50 text-red-600 hover:bg-red-100 text-xs transition border border-red-100" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        if (filtered.length === 0) {
+            htmlRows = `<tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-folder-open text-3xl mb-3 opacity-30"></i><p>Tidak ada data project ditemukan.</p></td></tr>`;
+        }
+
+        tbody.innerHTML = htmlRows;
+
+        // Update stats
+        const ecActive = document.getElementById('stat-project-active');
+        const ecComp = document.getElementById('stat-project-completed');
+        const ecCost = document.getElementById('stat-project-total-cost');
+        if(ecActive) ecActive.innerText = activeCount;
+        if(ecComp) ecComp.innerText = completedCount;
+        if(ecCost) ecCost.innerText = 'Rp ' + formatCompactNumber(grandTotalAll);
+    }
+
+    function formatCompactNumber(number) {
+        if (number < 1e3) return number;
+        if (number >= 1e3 && number < 1e6) return +(number / 1e3).toFixed(1) + " Ribu";
+        if (number >= 1e6 && number < 1e9) return +(number / 1e6).toFixed(1) + " Juta";
+        if (number >= 1e9 && number < 1e12) return +(number / 1e9).toFixed(1) + " Miliar";
+        if (number >= 1e12) return +(number / 1e12).toFixed(1) + " Triliun";
+        return number;
+    }
+
+    function printProjectReport(id) {
+        const p = projectData.find(x => x.id === id);
+        if(!p) return alert("Data tidak valid");
+        
+        // Populate Print Template
+        document.getElementById('prt-proj-name').innerText = p.projectName || '-';
+        document.getElementById('prt-proj-loc').innerText = p.location || '-';
+        document.getElementById('prt-proj-comp').innerText = p.company || '-';
+        document.getElementById('prt-proj-date').innerText = p.startDate + ' s/d ' + p.targetDate;
+        
+        // Costs Internet
+        document.getElementById('prt-net-inst').innerText = (p.netInstallCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-net-modem').innerText = (p.netModemCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-net-monthly').innerText = (p.netMonthlyCost||0).toLocaleString('id-ID');
+        // Costs PC
+        document.getElementById('prt-pc-dev').innerText = (p.pcDeviceCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-pc-inst').innerText = (p.pcInstallCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-pc-sub').innerText = (p.pcSubCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-pc-other').innerText = (p.pcOtherCost||0).toLocaleString('id-ID');
+        // Costs CCTV
+        document.getElementById('prt-cctv-cam').innerText = (p.cctvCamCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-cctv-nvr').innerText = (p.cctvNvrCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-cctv-sw').innerText = (p.cctvSwitchCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-cctv-inst').innerText = (p.cctvInstallCost||0).toLocaleString('id-ID');
+        document.getElementById('prt-cctv-other').innerText = (p.cctvOtherCost||0).toLocaleString('id-ID');
+        // Other
+        document.getElementById('prt-other').innerText = (p.otherCost||0).toLocaleString('id-ID');
+        
+        document.getElementById('prt-total-cost').innerText = 'Rp ' + (p.totalCost||0).toLocaleString('id-ID');
+        
+        const d = new Date();
+        document.getElementById('prt-print-date').innerText = d.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
+
+        // Show print view
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('project-print-layout').classList.remove('hidden');
+        
+        setTimeout(() => {
+            window.print();
+            // Restore view
+            document.getElementById('project-print-layout').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+        }, 500);
+    }
+</script>

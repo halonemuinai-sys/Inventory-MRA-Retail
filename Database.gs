@@ -25,7 +25,8 @@ function setupDatabase() {
     'DataGIS': ['id', 'location', 'brand', 'lat', 'lng', 'koneksi', 'pc_laptop', 'jml_network', 'network_desc', 'cctv', 'nvr', 'printer', 'image', 'updatedAt'],
     'SaaS_Licenses': ['id', 'company', 'category', 'name', 'vendor', 'cost', 'billingCycle', 'startDate', 'expiryDate', 'status', 'notes', 'evidenceLink', 'updatedAt'],
     'Network_SLA': ['id', 'year', 'month', 'location', 'percentage', 'notes', 'updatedAt'],
-    'Network_Contracts': ['id', 'location', 'provider', 'user', 'contractNo', 'billingNo', 'monthlyCost', 'annualCost', 'startDate', 'expiryDate', 'status', 'updatedAt']
+    'Network_Contracts': ['id', 'location', 'provider', 'user', 'contractNo', 'billingNo', 'monthlyCost', 'annualCost', 'startDate', 'expiryDate', 'status', 'updatedAt'],
+    'Projects': ['id', 'company', 'location', 'projectName', 'startDate', 'targetDate', 'status', 'netInstallCost', 'netModemCost', 'netMonthlyCost', 'pcInstallCost', 'pcDeviceCost', 'pcSubCost', 'pcOtherCost', 'cctvCamCost', 'cctvNvrCost', 'cctvSwitchCost', 'cctvInstallCost', 'cctvOtherCost', 'otherCost', 'totalCost', 'notes', 'updatedAt']
   };
 
   Object.keys(schemas).forEach(sheetName => {

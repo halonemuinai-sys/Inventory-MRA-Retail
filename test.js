@@ -1,4 +1,3 @@
-<script>
     // --- INITIALIZATION ---
 
 
@@ -148,9 +147,6 @@
             window.networkSLAsCached = data.networkSLAs || [];
             window.networkContractsCached = data.networkContracts || [];
             gisLocations = data.gisLocations || [];
-            window.apiData = window.apiData || {};
-            window.apiData.projects = data.projects || [];
-            if (typeof projectData !== 'undefined') projectData = data.projects || [];
             if (typeof initGISLogic === 'function') initGISLogic(gisLocations);
 
             // Render UI
@@ -585,7 +581,7 @@
     function renderCombinedChart(filteredInv) { const ctx = document.getElementById('chart-combined').getContext('2d'); if (chartInstanceCombined) chartInstanceCombined.destroy(); const monthlyCosts = new Array(12).fill(0); Object.keys(costAnalysisData).forEach(comp => { if (activeCompany === 'Global' || comp === activeCompany) { costAnalysisData[comp].forEach((val, idx) => { monthlyCosts[idx] += val; }); } }); const monthlyQty = new Array(12).fill(0); const year = selectedGlobalYear; for (let m = 0; m < 12; m++) { const monthStart = new Date(year, m, 1); const monthEnd = new Date(year, m + 1, 0); let count = 0; filteredInv.forEach(item => { if (item.type === 'Sewa') { const start = item.rentalStart ? new Date(item.rentalStart) : null; const end = item.rentalEnd ? new Date(item.rentalEnd) : null; if (start && end) { if (start <= monthEnd && end >= monthStart) { count++; } } } }); monthlyQty[m] = count; } chartInstanceCombined = new Chart(ctx, { type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'], datasets: [{ label: 'Total Biaya (Rp)', data: monthlyCosts, backgroundColor: '#60a5fa', borderRadius: 6, order: 2, yAxisID: 'y' }, { type: 'line', label: 'Jumlah Aset Sewa', data: monthlyQty, borderColor: '#f97316', backgroundColor: 'white', pointBorderColor: '#f97316', pointBackgroundColor: 'white', pointBorderWidth: 2, pointRadius: 4, borderWidth: 2, tension: 0.4, order: 1, yAxisID: 'y1' }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false, }, scales: { y: { type: 'linear', display: true, position: 'left', beginAtZero: true, grid: { borderDash: [2, 4], color: '#e2e8f0' }, ticks: { callback: function (value) { if (value >= 1000000) return (value / 1000000) + 'Jt'; if (value >= 1000) return (value / 1000) + 'k'; return value; }, font: { size: 10 } } }, y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1, font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } }, tooltip: { callbacks: { label: function (context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.dataset.yAxisID === 'y') { label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.raw); } else { label += context.raw + ' Unit'; } return label; } } } } } }); }
     function generateBAST_fromData(empData, assetId) { const asset = inventoryData.find(i => i.id == assetId); if (!asset) return; document.getElementById('bast-date').innerText = new Date().toLocaleDateString('id-ID'); document.getElementById('bast-emp-name').innerText = `: ${empData.name}`; document.getElementById('bast-emp-role').innerText = `: ${empData.role}`; document.getElementById('bast-emp-dept').innerText = `: ${empData.company} / ${empData.department}`; document.getElementById('bast-sign-name').innerText = empData.name; document.getElementById('bast-header-company').innerText = empData.company; document.getElementById('bast-asset-device').innerText = `${asset.brand} ${asset.model}`; document.getElementById('bast-asset-serial').innerText = asset.serial; const specs = [asset.processor, asset.ram, asset.storage].filter(Boolean).join(', '); document.getElementById('bast-asset-specs').innerText = specs || '-'; populateBASTAdminDropdown(); document.getElementById('bast-print-area').classList.remove('hidden'); }
     function populateBASTAdminDropdown() { const sel = document.getElementById('bast-admin-select'); sel.innerHTML = '<option value="">-- Pilih Admin --</option>'; masterData.filter(m => m.category === 'AdminSignatory').forEach(m => { sel.innerHTML += `<option value="${m.value}">${m.value}</option>`; }); }
-    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company'); [invFormSel, empFormSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Unit Bisnis --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
+    function populateCompanySelector() { const companies = new Set([...masterData.filter(m => m.category === 'Company').map(m => m.value), ...inventoryData.map(i => i.company), ...employeeData.map(e => e.company)]); const sidebarSel = document.getElementById('company-selector'); if (sidebarSel) { sidebarSel.innerHTML = '<option value="Global">Global (Semua)</option>'; companies.forEach(c => { if (c) sidebarSel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') sidebarSel.value = activeCompany; } const invFormSel = document.getElementById('form-company'); const empFormSel = document.getElementById('emp-form-company');[invFormSel, empFormSel].forEach(sel => { if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Unit Bisnis --</option>'; companies.forEach(c => { if (c) sel.innerHTML += `<option value="${c}">${c}</option>`; }); if (activeCompany !== 'Global') { sel.value = activeCompany; if (sel.id === 'emp-form-company') populateOnboardingAssets(); } } }); }
     function populateMasterDropdowns() {
         const fill = (id, cat, invKey) => {
             const el = document.getElementById(id);
@@ -605,11 +601,9 @@
                 // Deduplicate and sort
                 const uniqueValues = [...new Set(values)].sort();
 
-                let htmlContent = '';
                 uniqueValues.forEach(val => {
-                    htmlContent += `<option value="${val}">${val}</option>`;
+                    el.innerHTML += `<option value="${val}">${val}</option>`;
                 });
-                el.innerHTML += htmlContent;
             }
         };
 
@@ -627,10 +621,9 @@
         if (typeof populateLocationDropdown === 'function') populateLocationDropdown();
     }
     // Ticket logic moved to TicketJS.html
-    function populateTicketReporters() { const sel = document.getElementById('ticket-reporter'); if (sel) { let html = '<option value="" disabled selected>-- Pelapor --</option>'; employeeData.forEach(e => { html += `<option value="${e.id}">${e.name} (${e.department})</option>`; }); sel.innerHTML = html; } }
+    function populateTicketReporters() { const sel = document.getElementById('ticket-reporter'); if (sel) { sel.innerHTML = '<option value="" disabled selected>-- Pelapor --</option>'; employeeData.forEach(e => { sel.innerHTML += `<option value="${e.id}">${e.name} (${e.department})</option>`; }); } }
     function renderInventoryTable() {
-        let htmlRows = '';
-        filtered.forEach(item => {
+        const search = document.getElementById('inv-search').value.toLowerCase(); const filterType = document.getElementById('filter-type').value; const filterStatus = document.getElementById('filter-status').value; const tbody = document.getElementById('inventory-table-body'); tbody.innerHTML = ''; const filtered = inventoryData.filter(item => { const matchCompany = activeCompany === 'Global' || item.company === activeCompany; const matchesSearch = (item.brand && item.brand.toLowerCase().includes(search)) || (item.serial && item.serial.toLowerCase().includes(search)); const matchesType = filterType === '' || item.type === filterType; const matchesStatus = filterStatus === '' || item.status === filterStatus; return matchCompany && matchesSearch && matchesType && matchesStatus; }); if (filtered.length === 0) document.getElementById('inv-empty-msg').classList.remove('hidden'); else document.getElementById('inv-empty-msg').classList.add('hidden'); filtered.forEach(item => {
             const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
             const specsLine2 = `OS: ${item.os || '-'}`;
             const specsLine3 = `Office: ${item.office || '-'}`;
@@ -651,10 +644,8 @@
 
             if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
 
-            const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`; 
-            htmlRows += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+            const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`; tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
         });
-        tbody.innerHTML = htmlRows;
     }
 
     // --- OTHER DEVICE FUNCTIONS ---
@@ -673,7 +664,6 @@
         if (filtered.length === 0) document.getElementById('other-device-empty-msg').classList.remove('hidden');
         else document.getElementById('other-device-empty-msg').classList.add('hidden');
 
-        let htmlRows = '';
         filtered.forEach(item => {
             const location = item.location || '-';
             const actions = `
@@ -682,7 +672,7 @@
                     <button onclick="deleteOtherDeviceItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button>
                 </div>`;
 
-            htmlRows += `
+            tbody.innerHTML += `
                 <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors">
                     <td class="px-6 py-4">
                         <div class="font-bold text-slate-800 text-sm">${item.brand} ${item.model}</div>
@@ -695,7 +685,6 @@
                     <td class="px-6 py-4 text-right">${actions}</td>
                 </tr>`;
         });
-        tbody.innerHTML = htmlRows;
     }
 
     function deleteOtherDeviceItem(id) {
@@ -1127,7 +1116,6 @@
         if (filtered.length === 0) document.getElementById('inv-empty-msg').classList.remove('hidden');
         else document.getElementById('inv-empty-msg').classList.add('hidden');
 
-        let htmlRows = '';
         filtered.forEach(item => {
             const specsLine1 = [item.processor, item.ram, item.storage].filter(Boolean).join(' / ') || '-';
             const specsLine2 = `OS: ${item.os || '-'}`;
@@ -1158,21 +1146,11 @@
             if (item.assignedTo) tenantInfo += `<div class="mt-1 text-[11px] text-slate-700 font-medium border-t border-slate-100 pt-1">${item.assignedTo}</div>`;
 
             const actions = `<div class="flex items-center justify-end gap-2"><button onclick="editInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100" title="Edit"><i class="fa-regular fa-pen-to-square text-xs"></i></button><button onclick="deleteInventoryItem('${item.id}')" class="w-7 h-7 rounded flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100" title="Delete"><i class="fa-regular fa-trash-can text-xs"></i></button><button class="w-7 h-7 rounded flex items-center justify-center bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-100" title="Email/BAST"><i class="fa-regular fa-envelope text-xs"></i></button></div>`;
-            htmlRows += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div></td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div><div class="text-[10px] text-slate-500">${specsLine3}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
         });
-        tbody.innerHTML = htmlRows;
     }
 
-    function renderEmployeeTable() { 
-        const fullBody = document.getElementById('employee-table-body'); 
-        if (!fullBody) return;
-        const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany); 
-        let htmlRows = '';
-        filteredEmps.forEach(emp => { 
-            htmlRows += `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-sm font-medium text-slate-700">${emp.name}</td><td class="p-3 text-xs text-slate-500">${emp.company}</td><td class="p-3 text-xs text-slate-500">${emp.role}</td><td class="p-3 font-mono text-xs text-slate-600">${emp.assignedAssetId || '-'}</td><td class="p-3 text-right">${emp.assignedAssetId ? `<button onclick="generateBAST('${emp.id}')" class="text-brand-600 text-xs hover:underline">BAST</button>` : `<button onclick="openAssignModal('${emp.id}')" class="text-slate-400 text-xs hover:text-brand-600">Assign</button>`}</td></tr>`; 
-        }); 
-        fullBody.innerHTML = htmlRows;
-    }
+    function renderEmployeeTable() { const fullBody = document.getElementById('employee-table-body'); fullBody.innerHTML = ''; const filteredEmps = employeeData.filter(e => activeCompany === 'Global' || e.company === activeCompany); filteredEmps.forEach(emp => { fullBody.innerHTML += `<tr class="border-b border-slate-50 hover:bg-slate-50"><td class="p-3 text-sm font-medium text-slate-700">${emp.name}</td><td class="p-3 text-xs text-slate-500">${emp.company}</td><td class="p-3 text-xs text-slate-500">${emp.role}</td><td class="p-3 font-mono text-xs text-slate-600">${emp.assignedAssetId || '-'}</td><td class="p-3 text-right">${emp.assignedAssetId ? `<button onclick="generateBAST('${emp.id}')" class="text-brand-600 text-xs hover:underline">BAST</button>` : `<button onclick="openAssignModal('${emp.id}')" class="text-slate-400 text-xs hover:text-brand-600">Assign</button>`}</td></tr>`; }); }
 
     function renderCostTable() {
         const data = costAnalysisData;
@@ -1217,9 +1195,6 @@
         let totalValBudget = 0;
         let totalValCost = 0;
 
-        let htmlRows = '';
-        let vhtmlRows = '';
-
         Object.keys(data).forEach(comp => {
             if (activeCompany !== 'Global' && comp !== activeCompany) return;
             const vals = data[comp];
@@ -1231,7 +1206,7 @@
             grandTotalAll += total;
 
             const cells = vals.map(v => `<td class="p-2 border border-slate-100 text-xs text-right text-slate-600">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
-            htmlRows += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-brand-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
+            tbody.innerHTML += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-brand-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
 
             if(vbody) {
                 const budgetStr = budgetPerCompany[comp] || 0;
@@ -1264,7 +1239,7 @@
                 if (budgetStr === 0) remainingClass = 'text-slate-400 text-xs';
 
                 const deviceCount = activeDevicesCount[comp] || 0;
-                vhtmlRows += `
+                vbody.innerHTML += `
                     <tr onclick="openCostBreakdownModal('${comp}')" class="hover:bg-indigo-50 border-b border-slate-50 transition-colors cursor-pointer group">
                         <td class="p-3 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors"><i class="fa-solid fa-magnifying-glass-chart mr-1 opacity-0 group-hover:opacity-100 transition-opacity"></i> ${comp}</td>
                         <td class="p-3 text-xs font-mono text-slate-600 text-center">${deviceCount} Unit</td>
@@ -1289,7 +1264,7 @@
             const totRemaining = totalValBudget - totalValCost;
             const totalAllDevices = Object.values(activeDevicesCount).reduce((a, b) => a + b, 0);
             let percentT = 0; if (totalValBudget > 0) percentT = Math.min((totalValCost / totalValBudget) * 100, 100);
-            vhtmlRows += `
+            vbody.innerHTML += `
                 <tr class="bg-slate-50 border-t-2 border-slate-200">
                     <td class="p-3 text-xs font-extrabold text-slate-900">GRAND TOTAL</td>
                     <td class="p-3 text-xs font-mono font-bold text-slate-900 text-center">${totalAllDevices} Unit</td>
@@ -1304,13 +1279,11 @@
 
         // Render Total Row
         const totalCells = monthlyTotals.map(v => `<td class="p-2 border border-slate-200 text-xs text-right font-bold text-slate-900 bg-slate-100">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
-        htmlRows += `<tr class="border-t-2 border-slate-300">
-            <td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>${totalCells}
-            <td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-brand-700 bg-brand-50">${grandTotalAll.toLocaleString('id-ID')}</td>
+        tbody.innerHTML += `<tr class="border-t-2 border-slate-300">
+            <td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>
+            ${totalCells}
+            <td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-white bg-slate-800">${grandTotalAll.toLocaleString('id-ID')}</td>
         </tr>`;
-
-        tbody.innerHTML = htmlRows;
-        if(vbody) vbody.innerHTML = vhtmlRows;
         
         if (typeof renderCostChart === 'function') renderCostChart(monthlyTotals);
     }
@@ -1626,11 +1599,6 @@
         renderConfigCard('config-company-card', 'Daftar Unit Bisnis (PT)', 'Company', 'fa-building', 'PT Name');
         renderConfigCard('config-dept-card', 'Daftar Departemen', 'Department', 'fa-users-rectangle', 'IT, HR...');
         renderConfigCard('config-software-card', 'Daftar Software Onboarding', 'Software', 'fa-laptop-code', 'E.g. SAP, Office 365...');
-        
-        // Helpdesk Master Data
-        renderConfigCard('config-hd-category-card', 'Kategori Masalah Helpdesk', 'HD_Kategori', 'fa-headset', 'E.g. Retailsoft, Jaringan...');
-        renderConfigCard('config-hd-source-card', 'Sumber Tiket (HD Source)', 'HD_Source', 'fa-door-open', 'E.g. Phone, Email, Portal...');
-        renderConfigCard('config-hd-impact-card', 'Dampak Sistem (HD Impact)', 'HD_Dampak', 'fa-bolt-lightning', 'E.g. Sistem Down, Lambat...');
 
         renderUserManagementCard();
 
@@ -1833,7 +1801,20 @@
         // Remove non-numeric characters
         let value = input.value.replace(/\D/g, '');
 
-        // If not empty, format with thousands separator using ID locale
+        // If empty, set empty
+        if (value === '') {
+            input.value = '';
+            return;
+        }
+
+        // Format with thousands separator using ID locale
+        input.value = parseInt(value, 10).toLocaleString('id-ID');
+    }
+    function formatCurrency(input) {
+        // Remove non-numeric chars
+        let value = input.value.replace(/\D/g, '');
+
+        // Convert to number and locale string if valid
         if (value !== '') {
             value = parseInt(value, 10).toLocaleString('id-ID');
         }
@@ -1865,7 +1846,6 @@
         if (filtered.length === 0) document.getElementById('mob-empty-msg').classList.remove('hidden');
         else document.getElementById('mob-empty-msg').classList.add('hidden');
 
-        let htmlRows = '';
         filtered.forEach(item => {
             const specsLine1 = [item.ram, item.storage].filter(Boolean).join(' / ') || '-';
             const specsLine2 = `OS: ${item.os || '-'}`;
@@ -1893,9 +1873,8 @@
                 `<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-100 font-bold ml-2">TABLET</span>` : 
                 (item.deviceCategory === 'Smartphone' ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-bold ml-2">HP</span>` : '');
 
-            htmlRows += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="flex items-center"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div>${categoryLabel}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div>${colorInfo}</td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
+            tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0 group transition-colors"><td class="px-6 py-4 align-top"><div class="flex items-center"><div class="font-bold text-slate-800 text-sm mb-0.5">${item.brand} ${item.model}</div>${categoryLabel}</div><div class="text-[11px] text-slate-500 font-mono">${item.serial}</div>${colorInfo}</td><td class="px-6 py-4 align-top"><div class="text-[11px] text-slate-700 font-semibold mb-0.5">${specsLine1}</div><div class="text-[10px] text-slate-500">${specsLine2}</div></td><td class="px-6 py-4 align-top">${statusBadge}</td><td class="px-6 py-4 align-top">${tenantInfo}</td><td class="px-6 py-4 align-top text-right">${actions}</td></tr>`;
         });
-        tbody.innerHTML = htmlRows;
     }
 
     function switchMobileTab(tab) {
@@ -2130,9 +2109,6 @@
         const vbody = document.getElementById('mob-cost-validation-body');
         if(vbody) vbody.innerHTML = '';
 
-        let htmlRows = '';
-        let vhtmlRows = '';
-
         Object.keys(data).forEach(comp => {
             if (activeCompany !== 'Global' && comp !== activeCompany) return;
             const vals = data[comp];
@@ -2141,7 +2117,7 @@
             grandTotalAll += total;
 
             const cells = vals.map(v => `<td class="p-2 border border-slate-100 text-xs text-right text-slate-600">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
-            htmlRows += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-purple-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
+            tbody.innerHTML += `<tr><td class="p-2 border border-slate-100 text-xs font-bold text-purple-700">${comp}</td>${cells}<td class="p-2 border border-slate-100 text-xs font-bold text-right bg-slate-50">${total.toLocaleString('id-ID')}</td></tr>`;
 
             if(vbody) {
                 const budgetStr = budgetMobilePerCompany[comp] || 0;
@@ -2158,21 +2134,19 @@
                 let remainingClass = remaining < 0 ? 'text-red-500 font-bold text-xs' : 'text-emerald-500 font-bold text-xs';
                 if (budgetStr === 0) remainingClass = 'text-slate-400 text-xs';
                 const deviceCount = mobileDevicesCount[comp] || 0;
-                vhtmlRows += `<tr class="hover:bg-purple-50/50 border-b border-slate-50 transition-colors"><td class="p-3 text-xs font-bold text-purple-600">${comp}</td><td class="p-3 text-xs font-mono text-slate-600 text-center">${deviceCount} Unit</td><td class="p-3 text-xs font-mono text-slate-600 text-right">${budgetStr > 0 ? 'Rp ' + budgetStr.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono text-slate-800 font-bold text-right">${total > 0 ? 'Rp ' + total.toLocaleString('id-ID') : '-'}</td><td class="p-3 font-mono text-right ${remainingClass}">${budgetStr > 0 ? (remaining < 0 ? '- Rp ' + Math.abs(remaining).toLocaleString('id-ID') : '+ Rp ' + remaining.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center">${statusBadge}</td><td class="p-3 pl-6 pr-4"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="${barColor} h-full" style="width: ${percent}%"></div></div><span class="text-[10px] text-slate-500 font-bold w-8 text-right">${Math.round(percent)}%</span></div></td></tr>`;
+                vbody.innerHTML += `<tr class="hover:bg-purple-50/50 border-b border-slate-50 transition-colors"><td class="p-3 text-xs font-bold text-purple-600">${comp}</td><td class="p-3 text-xs font-mono text-slate-600 text-center">${deviceCount} Unit</td><td class="p-3 text-xs font-mono text-slate-600 text-right">${budgetStr > 0 ? 'Rp ' + budgetStr.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono text-slate-800 font-bold text-right">${total > 0 ? 'Rp ' + total.toLocaleString('id-ID') : '-'}</td><td class="p-3 font-mono text-right ${remainingClass}">${budgetStr > 0 ? (remaining < 0 ? '- Rp ' + Math.abs(remaining).toLocaleString('id-ID') : '+ Rp ' + remaining.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center">${statusBadge}</td><td class="p-3 pl-6 pr-4"><div class="flex items-center gap-2"><div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="${barColor} h-full" style="width: ${percent}%"></div></div><span class="text-[10px] text-slate-500 font-bold w-8 text-right">${Math.round(percent)}%</span></div></td></tr>`;
             }
         });
 
         const totalCells = monthlyTotals.map(v => `<td class="p-2 border border-slate-200 text-xs text-right font-bold text-slate-900 bg-slate-100">${v > 0 ? v.toLocaleString('id-ID') : '-'}</td>`).join('');
-        htmlRows += `<tr class="border-t-2 border-slate-300"><td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>${totalCells}<td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-brand-700 bg-brand-50">${grandTotalAll.toLocaleString('id-ID')}</td></tr>`;
-        
-        tbody.innerHTML = htmlRows;
+        tbody.innerHTML += `<tr class="border-t-2 border-slate-300"><td class="p-2 border border-slate-200 text-xs font-extrabold text-slate-900 bg-slate-100">TOTAL BULANAN</td>${totalCells}<td class="p-2 border border-slate-200 text-xs font-extrabold text-right text-white bg-purple-700">${grandTotalAll.toLocaleString('id-ID')}</td></tr>`;
+
         if(vbody && activeCompany === 'Global') {
             const totR = totalValBudget - totalValCost;
             const totalD = Object.values(mobileDevicesCount).reduce((a, b) => a + b, 0);
             let pT = 0; if (totalValBudget > 0) pT = Math.min((totalValCost / totalValBudget) * 100, 100);
-            vhtmlRows += `<tr class="bg-slate-50 border-t-2 border-slate-200"><td class="p-3 text-xs font-extrabold text-slate-900">GRAND TOTAL</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-center">${totalD} Unit</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValBudget > 0 ? 'Rp ' + totalValBudget.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValCost > 0 ? 'Rp ' + totalValCost.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-right ${totR < 0 ? 'text-red-600' : 'text-emerald-600'}">${totalValBudget > 0 ? (totR < 0 ? '- Rp ' + Math.abs(totR).toLocaleString('id-ID') : '+ Rp ' + totR.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center"></td><td class="p-3 pl-6 pr-4 text-right text-[11px] font-bold text-slate-600">${Math.round(pT)}% Used</td></tr>`;
+            vbody.innerHTML += `<tr class="bg-slate-50 border-t-2 border-slate-200"><td class="p-3 text-xs font-extrabold text-slate-900">GRAND TOTAL</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-center">${totalD} Unit</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValBudget > 0 ? 'Rp ' + totalValBudget.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-slate-900 text-right">${totalValCost > 0 ? 'Rp ' + totalValCost.toLocaleString('id-ID') : '-'}</td><td class="p-3 text-xs font-mono font-bold text-right ${totR < 0 ? 'text-red-600' : 'text-emerald-600'}">${totalValBudget > 0 ? (totR < 0 ? '- Rp ' + Math.abs(totR).toLocaleString('id-ID') : '+ Rp ' + totR.toLocaleString('id-ID')) : '-'}</td><td class="p-3 text-center"></td><td class="p-3 pl-6 pr-4 text-right text-[11px] font-bold text-slate-600">${Math.round(pT)}% Used</td></tr>`;
         }
-        if(vbody) vbody.innerHTML = vhtmlRows;
 
         if (typeof renderMobileCostChart === 'function') renderMobileCostChart(monthlyTotals);
         if (typeof renderMobileKPI === 'function') renderMobileKPI();
@@ -2220,4 +2194,3 @@
         }).withFailureHandler(() => { alert("Gagal menyimpan budget mobile."); }).apiUpdateEmployee({ id: empId, budgetMobile: cleanValue });
     }
 
-</script>
